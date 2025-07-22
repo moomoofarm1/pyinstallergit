@@ -114,7 +114,6 @@ ensure_path_now
 persist_path
 
 # 4) Sanity checks
-source scripts/00_1_fix_path.sh
 echo "[INFO] Checking versions..."
 if ! command -v conda >/dev/null 2>&1; then
   echo "[ERROR] conda still not on PATH. Try: export PATH=\"$HOME/.local/bin:\$PATH\"" >&2
@@ -127,18 +126,3 @@ fi
 
 conda --version
 uv --version
-
-# Make sure the shell remembers the path of conda and uv.
-mkdir -p ~/.config/profile.d
-cat > ~/.config/profile.d/localbin.sh <<'EOF'
-export PATH="$HOME/.local/bin:$PATH"
-EOF
-# Make bash/zsh pick it up:
-grep -qxF '[ -d "$HOME/.config/profile.d" ] && for f in "$HOME"/.config/profile.d/*.sh; do . "$f"; done' ~/.bashrc \
-  || echo '[ -d "$HOME/.config/profile.d" ] && for f in "$HOME"/.config/profile.d/*.sh; do . "$f"; done' >> ~/.bashrc
-# Reload
-exec $SHELL -l
-conda --version
-uv --version
-
-echo "[INFO] Bootstrap complete."
