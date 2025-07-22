@@ -114,7 +114,7 @@ ensure_path_now
 persist_path
 
 # 4) Sanity checks
-. scripts/00_1_fix_path.sh
+source scripts/00_1_fix_path.sh
 echo "[INFO] Checking versions..."
 if ! command -v conda >/dev/null 2>&1; then
   echo "[ERROR] conda still not on PATH. Try: export PATH=\"$HOME/.local/bin:\$PATH\"" >&2
