@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 00_bootstrap.sh
-# Installs required system tools, micromamba (ARM/x86), and uv, then fixes PATH.
+# Installs required system tools, Miniconda (ARM/x86), and uv, then fixes PATH.
 # Safe to re-run (idempotent).
 
 set -euo pipefail
@@ -74,28 +74,21 @@ fi
 ensure_path_now
 add_to_shell_rc
 
-# 2) micromamba (lightweight conda)
-if ! command -v micromamba >/dev/null 2>&1; then
-  echo "[INFO] Installing micromamba for $ARCH"
+# 2) Miniconda
+if ! command -v conda >/dev/null 2>&1; then
+  echo "[INFO] Installing Miniconda for $ARCH"
   case "$ARCH" in
-    aarch64) MM_URL="https://micro.mamba.pm/api/micromamba/linux-aarch64/latest" ;;
-    x86_64|amd64)  MM_URL="https://micro.mamba.pm/api/micromamba/linux-64/latest" ;;
-    *) echo "[ERROR] Unsupported arch $ARCH. Install micromamba manually." >&2; exit 1 ;;
+    aarch64) MC_URL="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh" ;;
+    x86_64|amd64)  MC_URL="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" ;;
+    *) echo "[ERROR] Unsupported arch $ARCH. Install Miniconda manually." >&2; exit 1 ;;
   esac
 
   TMPDIR="$(mktemp -d)"
   trap 'rm -rf "$TMPDIR"' EXIT
 
-  curl -Ls "$MM_URL" -o "$TMPDIR/mm.tar"
-  tar -xf "$TMPDIR/mm.tar" -C "$TMPDIR"
-
-  MM_PATH="$(find "$TMPDIR" -type f -name micromamba | head -n1)"
-  if [ -z "$MM_PATH" ]; then
-    echo "[ERROR] micromamba binary not found in archive." >&2
-    exit 1
-  fi
-
-  install -m 755 "$MM_PATH" "$INSTALL_BIN/micromamba"
+  curl -Ls "$MC_URL" -o "$TMPDIR/miniconda.sh"
+  bash "$TMPDIR/miniconda.sh" -b -p "$HOME/miniconda3"
+  ln -s "$HOME/miniconda3/bin/conda" "$INSTALL_BIN/conda" 2>/dev/null || true
 fi
 
 # 3) uv (Python package manager)
@@ -109,7 +102,7 @@ ensure_path_now
 add_to_shell_rc
 
 # 4) Sanity checks
-command -v micromamba >/dev/null 2>&1 || { echo "[ERROR] micromamba still not on PATH"; exit 1; }
+command -v conda >/dev/null 2>&1 || { echo "[ERROR] conda still not on PATH"; exit 1; }
 command -v uv >/dev/null 2>&1 || { echo "[ERROR] uv still not on PATH"; exit 1; }
 
 echo "[INFO] Bootstrap complete."
