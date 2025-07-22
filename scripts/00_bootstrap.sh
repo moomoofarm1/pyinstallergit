@@ -113,3 +113,23 @@ command -v micromamba >/dev/null 2>&1 || { echo "[ERROR] micromamba still not on
 command -v uv >/dev/null 2>&1 || { echo "[ERROR] uv still not on PATH"; exit 1; }
 
 echo "[INFO] Bootstrap complete."
+
+
+# Run scripts for the sys to detect the micromamba and uv
+
+# 1. See where they actually got installed
+ls -l ~/.local/bin /root/.local/bin 2>/dev/null
+which -a micromamba uv 2>/dev/null || true
+echo "$PATH"
+
+# 2. If binaries are in /root/.local/bin, copy/symlink them to a global dir:
+sudo install -m 755 /root/.local/bin/micromamba /usr/local/bin/micromamba 2>/dev/null || true
+sudo install -m 755 /root/.local/bin/uv          /usr/local/bin/uv          2>/dev/null || true
+
+# 3. Or, if they are in YOUR home:
+export PATH="$HOME/.local/bin:$PATH"
+hash -r  # refresh the command hash table
+
+# 4. Persist it for future sessions:
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+# if you’re not using bash, add to ~/.profile or /etc/profile.d/localbin.sh
