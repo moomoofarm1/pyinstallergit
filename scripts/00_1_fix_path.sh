@@ -34,3 +34,6 @@ fi
 
 command -v conda >/dev/null && conda --version || echo "conda still not found"
 command -v uv    >/dev/null && uv --version    || echo "uv still not found"
+
+sudo install -m 755 "$HOME/miniconda3/bin/conda" /usr/local/bin/conda
+sudo install -m 755 "$HOME/.local/bin/uv"        /usr/local/bin/uv
