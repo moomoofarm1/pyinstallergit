@@ -7,3 +7,7 @@ scripts/02_git_init.sh
 scripts/03_uv_sync.sh
 scripts/04_run_demo.sh           # optional demo
 scripts/05_build_binary.sh
+
+export LS_URL="http://localhost:8080"
+export LS_API_TOKEN="YOUR_TOKEN"
+export LS_PROJECT_ID="1"
