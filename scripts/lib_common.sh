@@ -1,43 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/lib_common.sh"
 
-OS="$(uname -s)"
-ARCH="$(uname -m)"
-PM="$(detect_pkg_manager)"
-echo "[INFO] OS=$OS ARCH=$ARCH PM=$PM"
+ensure_in_path() {
+  # Add ~/.local/bin to PATH for this session
+  export PATH="$HOME/.local/bin:$PATH"
+  # Persist for future shells
+  if ! grep -q 'HOME/.local/bin' "$HOME/.bashrc" 2>/dev/null; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+  fi
+}
 
-# 1) Ensure base tools
-NEEDED=(curl wget tar bzip2 xz-utils git binutils build-essential)
-for t in "${NEEDED[@]}"; do
-  command -v "${t%% *}" >/dev/null 2>&1 || NEED_INSTALL=1
-done
+detect_pkg_manager() {
+  for pm in apt-get yum dnf apk zypper pacman; do
+    command -v "$pm" >/dev/null 2>&1 && { echo "$pm"; return; }
+  done
+  echo "none"
+}
 
-if [ "${NEED_INSTALL:-0}" -eq 1 ]; then
-  install_pkgs "$PM" "${NEEDED[@]}"
-fi
-
-ensure_in_path
-
-# 2) micromamba (lightweight conda)
-if ! command -v micromamba >/dev/null 2>&1; then
-  echo "[INFO] Installing micromamba for $ARCH"
-  case "$ARCH" in
-    aarch64) MM_URL="https://micro.mamba.pm/api/micromamba/linux-aarch64/latest" ;;
-    x86_64)  MM_URL="https://micro.mamba.pm/api/micromamba/linux-64/latest" ;;
-    *) echo "Unsupported arch $ARCH. Install micromamba manually." >&2; exit 1 ;;
+install_pkgs() {
+  local PM="$1"; shift
+  case "$PM" in
+    apt-get) sudo apt-get update && sudo apt-get install -y "$@" ;;
+    yum)     sudo yum install -y "$@" ;;
+    dnf)     sudo dnf install -y "$@" ;;
+    apk)     sudo apk add --no-cache "$@" ;;
+    zypper)  sudo zypper install -y "$@" ;;
+    pacman)  sudo pacman -Sy --noconfirm "$@" ;;
+    none)    echo "No package manager found. Install: $*" >&2; exit 1 ;;
   esac
-  curl -Ls "$MM_URL" | tar -xvj bin/micromamba
-  mkdir -p "$HOME/.local/bin"
-  mv bin/micromamba "$HOME/.local/bin/"
-fi
-
-# 3) uv (Python package manager)
-if ! command -v uv >/dev/null 2>&1; then
-  echo "[INFO] Installing uv"
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-fi
-
-ensure_in_path
-echo "[INFO] Bootstrap complete."
+}
