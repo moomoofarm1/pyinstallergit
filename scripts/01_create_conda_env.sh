@@ -1,210 +1,192 @@
 #!/usr/bin/env bash
-
-# R-Python Bridge Environment Setup Script
-# Creates a conda environment with R and sets up Python integration via reticulate
+# ==============================================================================
+# R–Python Bridge Environment Setup Script (Ubuntu/conda)
+# ------------------------------------------------------------------------------
+# - Creates a conda env with R (r-base) + reticulate
+# - Installs needed R packages (reticulate, tidyverse, etc.)
+# - Installs GitHub package "talk" (theharmonylab/talk) via remotes
+# - Creates a separate Python env for reticulate: $PYTHON_ENV
+# - Installs common Python pkgs (numpy, pandas) into that env
+# - Streams R installation logs to your terminal
+# ------------------------------------------------------------------------------
+# Safe to re-run (idempotent).
+# ==============================================================================
 
 set -euo pipefail
 
-# Configuration
-readonly ENV_NAME="r-reticulate" # for reticulate itself
-readonly PYTHON_ENV="talkrpp_condaenv" # to run inside the R.
-readonly PYTHON_VERSION="3.9"
-readonly R_VERSION="4.4"  # Specify R version
-readonly R_PACKAGES=("reticulate" "devtools" "tidyverse")  # Removed 'talk' as it may not be available
-readonly R_PACKAGES_OPTIONAL=("talk")  # Optional packages that might not be available
-readonly PYTHON_PACKAGES=("numpy" "pandas")  # Optional packages
+# ----------------------------- Configuration ---------------------------------
+readonly ENV_NAME="r-reticulate"           # conda env containing R + reticulate
+readonly PYTHON_ENV="talkrpp_condaenv"     # reticulate-managed Python env name
+readonly PYTHON_VERSION="3.9"              # Python version for PYTHON_ENV
+readonly R_VERSION="4.4"                   # R version in ENV_NAME
 readonly CRAN_MIRROR="${CRAN:-https://cloud.r-project.org}"
 
-# Colors for output
+# R packages installed **via conda** (avoid compile hassles)
+# Add more here if you want them preinstalled at the conda level.
+readonly CONDA_R_PACKAGES=(
+  r-reticulate r-remotes r-devtools r-tidyverse git
+)
+
+# Python packages to drop into PYTHON_ENV (optional)
+readonly PY_PKGS=(numpy pandas)
+
+# ------------------------------ Color output ---------------------------------
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
-readonly NC='\033[0m' # No Color
+readonly NC='\033[0m'
 
-# Logging functions
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $*"
-}
+log_info()    { echo -e "${BLUE}[INFO]${NC} $*"; }
+log_success() { echo -e "${GREEN}[SUCCESS]${NC} $*"; }
+log_warning() { echo -e "${YELLOW}[WARNING]${NC} $*"; }
+log_error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $*"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $*"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $*" >&2
-}
-
-# Check if conda is available
+# ------------------------------ Helpers --------------------------------------
 check_conda() {
-    if ! command -v conda >/dev/null 2>&1; then
-        log_error "conda not found. Please install conda or run scripts/00_bootstrap.sh first."
-        exit 1
-    fi
-    
-    local conda_base
-    conda_base="$(conda info --base)"
-    # shellcheck source=/dev/null
-    source "$conda_base/etc/profile.d/conda.sh"
-    log_info "Using conda from: $conda_base"
+  if ! command -v conda >/dev/null 2>&1; then
+    log_error "conda not found. Install conda or run your bootstrap script first."
+    exit 1
+  fi
+  CONDA_BASE="$(conda info --base)"
+  # shellcheck source=/dev/null
+  source "$CONDA_BASE/etc/profile.d/conda.sh"
+  log_info "Using conda from: $CONDA_BASE"
 }
 
-# Configure conda channels to avoid Anaconda ToS
 configure_conda_channels() {
-    log_info "Configuring conda channels..."
-    
-    conda config --set channel_priority strict
-    
-    # Remove defaults channel if present (ignore errors)
-    if conda config --show channels | grep -q "defaults"; then
-        conda config --remove channels defaults || log_warning "Could not remove defaults channel"
-    fi
-    
-    # Add conda-forge if not already present
-    if ! conda config --show channels | grep -q "conda-forge"; then
-        conda config --add channels conda-forge
-    fi
-    
-    log_info "Conda channels configured to use only conda-forge"
+  log_info "Configuring conda channels (use conda-forge only)…"
+  conda config --set channel_priority strict
+  conda config --remove channels defaults   || true
+  conda config --add    channels conda-forge || true
 }
 
-# Create or verify R environment
 setup_r_environment() {
-    log_info "Setting up R environment: $ENV_NAME"
-    
-    if conda env list | grep -qw "$ENV_NAME"; then
-        log_info "Environment '$ENV_NAME' already exists"
-        return 0
-    fi
-    
-    log_info "Creating new environment '$ENV_NAME'..."
+  log_info "Setting up conda env: $ENV_NAME"
+  if conda env list | grep -qw "$ENV_NAME"; then
+    log_info "Env '$ENV_NAME' already exists."
+  else
     conda create -y -n "$ENV_NAME" \
-        --override-channels -c conda-forge \
-        "python=$PYTHON_VERSION" \
-        "r-base=$R_VERSION" \
-        r-reticulate
-    
-    log_success "Environment '$ENV_NAME' created successfully"
+      --override-channels -c conda-forge \
+      "python=$PYTHON_VERSION" "r-base=$R_VERSION" r-reticulate
+    log_success "Env '$ENV_NAME' created."
+  fi
+
+  # Ensure extra R pkgs + git are available via conda (faster than compiling in R)
+  log_info "Installing base R pkgs via conda: ${CONDA_R_PACKAGES[*]}"
+  conda install -y -n "$ENV_NAME" -c conda-forge "${CONDA_R_PACKAGES[@]}"
 }
 
-# Install R packages and create Python environment
 install_r_packages_and_python_env() {
-    log_info "Installing R packages and setting up Python environment..."
+  log_info "Installing R packages (talk from GitHub) and configuring reticulate Python env…"
 
-    export PYTHON_ENV CRAN_MIRROR PYTHON_VERSION
+  export PYTHON_ENV PYTHON_VERSION CRAN_MIRROR
 
-    # Create a temp R script
-    TMP_R="$(mktemp -t rsetup.XXXXXX.R)"
+  local TMP_R
+  TMP_R="$(mktemp -t rsetup.XXXXXX.R)"
 
-    cat >"$TMP_R" <<'RSCRIPT'
-options(warn=1)           # flush warnings immediately
-flush.console <- function() {}  # on some platforms this is a no-op, but keep it.
+  cat >"$TMP_R" <<'RSCRIPT'
+options(warn=1)
 
-cran_mirror   <- Sys.getenv("CRAN_MIRROR", "https://cloud.r-project.org")
-python_env    <- Sys.getenv("PYTHON_ENV", "talkrpp_condaenv")
-python_version<- Sys.getenv("PYTHON_VERSION", "3.9")
+cran_mirror    <- Sys.getenv("CRAN_MIRROR", "https://cloud.r-project.org")
+python_env     <- Sys.getenv("PYTHON_ENV", "talkrpp_condaenv")
+python_version <- Sys.getenv("PYTHON_VERSION", "3.9")
 
 message("Using CRAN mirror: ", cran_mirror)
 message("Python env name: ", python_env)
 message("R version: ", R.version.string)
 
-req_pkgs <- c("reticulate", "devtools")
-opt_pkgs <- c("tidyverse")
-
-ncores <- max(1, parallel::detectCores() - 1)
-message("Installing required R packages: ", paste(req_pkgs, collapse=", "))
-install.packages(req_pkgs, repos = cran_mirror, Ncpus = ncores, dependencies = TRUE)
-
-for (pkg in opt_pkgs) {
-  message("Attempting optional package: ", pkg)
-  tryCatch(
-    install.packages(pkg, repos = cran_mirror, Ncpus = ncores),
-    error = function(e) message("Optional '", pkg, "' failed: ", e$message)
-  )
+# remotes/devtools/reticulate/tidyverse installed by conda already, but verify
+for (pkg in c("remotes", "reticulate")) {
+  if (!requireNamespace(pkg, quietly = TRUE))
+    stop(pkg, " not installed; please ensure conda installed it.")
 }
 
-devtools::install_github("theharmonylab/talk")
+# Install 'talk' from GitHub if missing
+if (!requireNamespace("talk", quietly = TRUE)) {
+  message("Installing 'talk' from GitHub (theharmonylab/talk)…")
+  remotes::install_github("theharmonylab/talk", upgrade = "never")
+}
+
 library(talk)
-talkrpp_install()
-talkrpp_initialize(save_profile = TRUE)
+# these are package-specific functions you mentioned
+try(talkrpp_install(), silent = TRUE)
+try(talkrpp_initialize(save_profile = TRUE), silent = TRUE)
 
-#library(reticulate)
+# Now manage Python env via reticulate
+library(reticulate)
 
-#envs <- conda_list()
-#if (python_env %in% envs$name) {
-#  message("Python env '", python_env, "' already exists.")
-#} else {
-#  message("Creating Python env '", python_env, "' with Python ", python_version)
-#  conda_create(envname = python_env, python_version = python_version)
-#}
+envs <- tryCatch(conda_list(), error = function(e) data.frame())
+if (!(python_env %in% envs$name)) {
+  message("Creating Python env '", python_env, "' with Python ", python_version)
+  conda_create(envname = python_env, python_version = python_version)
+}
 
-#py_pkgs <- c("numpy", "pandas")
-#if (length(py_pkgs)) {
-#  message("Installing Python packages into '", python_env, "': ", paste(py_pkgs, collapse=", "))
-#  tryCatch(
-#    conda_install(envname = python_env, packages = py_pkgs),
-#    error = function(e) message("Warning: could not install Python packages: ", e$message)
-#  )
-#}
+# Install Python packages into that env
+py_pkgs <- c("numpy", "pandas")
+if (length(py_pkgs)) {
+  message("Installing Python packages into '", python_env, "': ", paste(py_pkgs, collapse=", "))
+  tryCatch(
+    conda_install(envname = python_env, packages = py_pkgs),
+    error = function(e) message("Warning: could not install Python packages: ", e$message)
+  )
+}
 
 message("Setup completed successfully!")
 RSCRIPT
 
-    # Run it with no capture and line-buffering
-    # stdbuf is in coreutils (apt-get install coreutils if missing; on mac use 'script -q /dev/null ...')
-    if command -v stdbuf >/dev/null 2>&1; then
-        STD_BUF="stdbuf -oL -eL"
-    else
-        STD_BUF=""
-    fi
+  # Stream output live (use stdbuf if available); conda >=4.14 supports --no-capture-output
+  local STD_BUF=""
+  if command -v stdbuf >/dev/null 2>&1; then
+    STD_BUF="stdbuf -oL -eL"
+  fi
 
-    if conda run --no-capture-output -n "$ENV_NAME" $STD_BUF Rscript "$TMP_R"; then
-        log_success "R packages and Python environment setup completed"
-    else
-        log_error "Failed to install R packages or create Python environment"
-        rm -f "$TMP_R"
-        return 1
-    fi
+  if conda run --help | grep -q -- "no-capture-output"; then
+    CONDA_RUN_OPTS="--no-capture-output"
+  else
+    CONDA_RUN_OPTS=""
+  fi
 
+  if conda run $CONDA_RUN_OPTS -n "$ENV_NAME" $STD_BUF Rscript "$TMP_R"; then
+    log_success "R packages and Python environment setup completed."
+  else
+    log_error "R script failed. Check logs above."
     rm -f "$TMP_R"
+    return 1
+  fi
+
+  rm -f "$TMP_R"
 }
 
-
-# Display usage instructions
 show_usage_instructions() {
-    log_success "Setup completed successfully!"
-    echo
-    echo "To use the R-Python bridge environment:"
-    echo "  1. Activate the conda environment:"
-    echo "     conda activate $ENV_NAME"
-    echo
-    echo "  2. Start R:"
-    echo "     R -q"
-    echo
-    echo "  3. In R, configure the Python environment:"
-    echo "     reticulate::use_condaenv('$PYTHON_ENV', required = TRUE)"
-    echo
-    echo "  4. Test the setup:"
-    echo "     py_config()  # Should show Python configuration"
-    echo "     py_run_string('print(\"Hello from Python!\")')"
+  log_success "All done!"
+  cat <<EOF
+
+To use the R–Python bridge:
+  1. Activate the env:
+     conda activate $ENV_NAME
+
+  2. Start R and select the Python env:
+     R -q
+     reticulate::use_condaenv('$PYTHON_ENV', required = TRUE)
+     py_config()                      # verify
+     py_run_string('print("Hello from Python!")')
+
+  3. If you need to add more Python pkgs later:
+     reticulate::conda_install(envname = '$PYTHON_ENV', packages = c('scikit-learn'))
+
+EOF
 }
 
-# Main execution
 main() {
-    log_info "Starting R-Python bridge environment setup..."
-    
-    check_conda
-    configure_conda_channels
-    setup_r_environment
-    install_r_packages_and_python_env
-    show_usage_instructions
+  log_info "Starting setup…"
+  check_conda
+  configure_conda_channels
+  setup_r_environment
+  install_r_packages_and_python_env
+  show_usage_instructions
 }
 
-# Run main function if script is executed directly
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
 fi
