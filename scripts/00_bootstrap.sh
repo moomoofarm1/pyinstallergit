@@ -29,31 +29,16 @@ install_pkgs() {
 }
 
 ensure_path_now() {
-  export PATH="$HOME/.local/bin:$PATH"
+  export PATH="$HOME/.local/bin:$HOME/miniconda3/bin:$PATH"
   hash -r 2>/dev/null || true
 }
 
 persist_path() {
-  local line='export PATH="$HOME/.local/bin:$PATH"'
+  local line='export PATH="$HOME/.local/bin:$HOME/miniconda3/bin:$PATH"'
   for rc in "$HOME/.bashrc" "$HOME/.profile" "$HOME/.zshrc"; do
     [ -f "$rc" ] || continue
     grep -qxF "$line" "$rc" || echo "$line" >> "$rc"
   done
-}
-
-symlink_or_wrapper() {
-  # $1 = target, $2 = link path (in INSTALL_BIN)
-  local target="$1" link="$2"
-  if [ -x "$target" ]; then
-    ln -sf "$target" "$link" 2>/dev/null || {
-      # fallback: small wrapper script
-      cat >"$link" <<EOF
-#!/usr/bin/env bash
-exec "$target" "\$@"
-EOF
-      chmod +x "$link"
-    }
-  fi
 }
 
 #######################################
@@ -68,21 +53,20 @@ INSTALL_BIN="${XDG_BIN_HOME:-$HOME/.local/bin}"
 mkdir -p "$INSTALL_BIN"
 
 # 1) System deps
-BASE_PKGS=(curl wget tar bzip2 xz-utils git binutils)
+BASE_PKGS=(curl wget tar bzip2 git)
 case "$PM" in
-  apk)    BASE_PKGS+=(build-base) ;;
-  pacman) BASE_PKGS+=(base-devel) ;;
-  *)      BASE_PKGS+=(build-essential) ;;
+  apt-get) BASE_PKGS+=(xz-utils build-essential) ;;
+  apk)     BASE_PKGS+=(xz build-base) ;;
+  pacman)  BASE_PKGS+=(xz base-devel) ;;
+  yum|dnf) BASE_PKGS+=(xz) ;;
+  *)       BASE_PKGS+=(xz-utils build-essential) ;;
 esac
 
 NEED_INSTALL=0
-for t in curl wget tar bzip2 xz git objdump; do
+for t in curl wget tar bzip2 xz git; do
   command -v "$t" >/dev/null 2>&1 || NEED_INSTALL=1
 done
 [ "$NEED_INSTALL" -eq 1 ] && install_pkgs "$PM" "${BASE_PKGS[@]}"
-
-ensure_path_now
-persist_path
 
 # 2) Miniconda (only if conda missing)
 if ! command -v conda >/dev/null 2>&1; then
@@ -98,31 +82,48 @@ if ! command -v conda >/dev/null 2>&1; then
 
   curl -Ls "$MC_URL" -o "$TMPDIR/miniconda.sh"
   bash "$TMPDIR/miniconda.sh" -b -p "$HOME/miniconda3"
-
-  # Put a stable shim in INSTALL_BIN
-  symlink_or_wrapper "$HOME/miniconda3/bin/conda" "$INSTALL_BIN/conda"
+  
+  # Initialize conda for bash
+  "$HOME/miniconda3/bin/conda" init bash
+  
+  # Create symlink in .local/bin
+  ln -sf "$HOME/miniconda3/bin/conda" "$INSTALL_BIN/conda"
 fi
 
 # 3) uv (Python package manager)
 if ! command -v uv >/dev/null 2>&1; then
   echo "[INFO] Installing uv"
   curl -LsSf https://astral.sh/uv/install.sh | sh
-  # installer drops 'uv' into ~/.local/bin
+  # Ensure uv is in the right place
+  if [ -f "$HOME/.cargo/bin/uv" ]; then
+    ln -sf "$HOME/.cargo/bin/uv" "$INSTALL_BIN/uv"
+  fi
 fi
 
+# Update PATH and persist
 ensure_path_now
 persist_path
 
+# Source conda environment if it exists
+if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
+  source "$HOME/miniconda3/etc/profile.d/conda.sh"
+fi
+
 # 4) Sanity checks
 echo "[INFO] Checking versions..."
-if ! command -v conda >/dev/null 2>&1; then
-  echo "[ERROR] conda still not on PATH. Try: export PATH=\"$HOME/.local/bin:\$PATH\"" >&2
-  exit 1
-fi
-if ! command -v uv >/dev/null 2>&1; then
-  echo "[ERROR] uv still not on PATH. Try: export PATH=\"$HOME/.local/bin:\$PATH\"" >&2
+if command -v conda >/dev/null 2>&1; then
+  conda --version
+else
+  echo "[ERROR] conda still not on PATH" >&2
   exit 1
 fi
 
-conda --version
-uv --version
+if command -v uv >/dev/null 2>&1; then
+  uv --version
+else
+  echo "[ERROR] uv still not on PATH" >&2
+  exit 1
+fi
+
+echo "[SUCCESS] Bootstrap complete!"
+echo "Note: In new shells, run 'source ~/.bashrc' or restart your shell to use these tools."
