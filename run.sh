@@ -4,7 +4,7 @@ export LS_API_TOKEN="YOUR_TOKEN"
 export LS_PROJECT_ID="1"
 
 apt update && apt upgrade && \
-  apt install -y sudo -y nano && \
+  apt install --yes sudo nano && \
   bash scripts/00_bootstrap.sh && \
   source ~/.bashrc
   
