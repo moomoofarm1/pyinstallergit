@@ -2,48 +2,62 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# If you have ensure_in_path in lib_common.sh, keep the source; otherwise remove.
-source "$SCRIPT_DIR/lib_common.sh" 2>/dev/null || true
-ensure_in_path 2>/dev/null || true
+# --- config ---
+PROJECT_ROOT="$(cd "$(dirname "$0")"/.. && pwd)"
+PYPROJECT="$PROJECT_ROOT/pyproject.toml"
+EXTRA_PKGS_FILE="$PROJECT_ROOT/config/extra-packages.txt"
 
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-cd "$PROJECT_ROOT"
+# --- helpers ---
+err() { echo "[ERROR] $*" >&2; exit 1; }
+info(){ echo "[INFO] $*"; }
 
-echo "[INFO] Project root: $PROJECT_ROOT"
-
-# 1. Ensure uv is available
+# ensure uv is on PATH
 if ! command -v uv >/dev/null 2>&1; then
-  echo "[ERROR] uv not found. Install it first." >&2
-  exit 1
+  err "uv not found. Install it first (curl -LsSf https://astral.sh/uv/install.sh | sh)."
 fi
 
-# 2. Ensure pyproject.toml exists
-if [ ! -f pyproject.toml ]; then
-  echo "[WARN] No pyproject.toml found. Creating a minimal one..."
-  cat > pyproject.toml <<'EOF'
+cd "$PROJECT_ROOT" || err "Cannot cd to $PROJECT_ROOT"
+
+info "Project root: $PROJECT_ROOT"
+
+# 1. Ensure pyproject.toml exists
+if [ ! -f "$PYPROJECT" ]; then
+  info "No pyproject.toml found. Creating a minimal one..."
+  cat > "$PYPROJECT" <<'EOF'
 [project]
-name = "pyinstaller-roberta-demo"
-version = "0.1.0"
+name = "uv-app"
+version = "0.0.1"
 requires-python = ">=3.10"
 dependencies = []
 EOF
 fi
 
-# 3. Add extra packages from config/extra-packages.txt
-if [ -f config/extra-packages.txt ]; then
-  echo "[INFO] Adding packages from config/extra-packages.txt"
+# 2. Add core packages if pyproject doesn't already mention them
+CORE_PKGS=(
+  numpy scipy torch transformers datasets accelerate scikit-learn
+  noisereduce label-studio-sdk pyinstaller rich requests
+)
+for pkg in "${CORE_PKGS[@]}"; do
+  if ! grep -qiE "^[[:space:]]*\"?$pkg(==|>=|\"|$)" "$PYPROJECT"; then
+    info "Adding core dep: $pkg"
+    uv add "$pkg"
+  fi
+done
+
+# 3. Extra packages file
+if [ -f "$EXTRA_PKGS_FILE" ]; then
+  info "Adding extras from $EXTRA_PKGS_FILE"
   while IFS= read -r pkg; do
     [[ -z "$pkg" || "$pkg" =~ ^[[:space:]]*# ]] && continue
-    echo "  -> uv add $pkg"
+    info "  -> uv add $pkg"
     uv add "$pkg"
-  done < config/extra-packages.txt
+  done < "$EXTRA_PKGS_FILE"
 else
-  echo "[INFO] No config/extra-packages.txt found (skipping)."
+  info "No extra-packages file found."
 fi
 
-# 4. Sync
-echo "[INFO] Running uv sync..."
+# 4. Sync env (creates/updates .venv)
+info "Running uv sync..."
 uv sync
 
-echo "[SUCCESS] uv sync complete."
+info "[SUCCESS] uv sync complete."
