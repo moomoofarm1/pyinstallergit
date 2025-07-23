@@ -9,8 +9,8 @@ apt update && apt upgrade && \
   source ~/.bashrc
   
 bash scripts/01_create_conda_env.sh && bash scripts/02_git_init.sh
-chmod +x scripts/03_uv_sync.sh
-scripts/03_uv_sync.sh
+chmod +x scripts/03_uv_sync.sh # Make the .sh file executable:
+scripts/03_uv_sync.sh # already exectuable
 # uv run pyinstaller --name roberta_active --onefile src/__main__.py  #  Building with PyInstaller afterward
 
 
