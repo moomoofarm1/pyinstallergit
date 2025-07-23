@@ -3,6 +3,8 @@ export LS_URL="http://localhost:8080"
 export LS_API_TOKEN="YOUR_TOKEN"
 export LS_PROJECT_ID="1"
 
+apt update && apt upgrade && apt install -y sudo nano
+
 chmod +x scripts/*.sh
 
 scripts/00_bootstrap.sh          # install system deps, Miniconda, uv
