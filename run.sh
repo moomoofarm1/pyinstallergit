@@ -3,7 +3,7 @@ export LS_URL="http://localhost:8080"
 export LS_API_TOKEN="YOUR_TOKEN"
 export LS_PROJECT_ID="1"
 
-apt update && apt upgrade && apt install -y sudo -y nano
+apt update && apt upgrade && apt install -y sudo -y nano && bash scripts/00_bootstrap.sh && bash scripts/01_create_conda_env.sh
 
 chmod +x scripts/*.sh
 
