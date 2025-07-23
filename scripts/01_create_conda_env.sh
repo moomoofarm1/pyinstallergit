@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # source "$SCRIPT_DIR/lib_common.sh"
 
 ENV_NAME="rbridge"
-PYTHON_ENV="textrpp_condaenv"
+PYTHON_ENV="talkrpp_condaenv"
 
 # --- ensure conda is available ---
 if ! command -v conda >/dev/null 2>&1; then
@@ -36,7 +36,7 @@ conda config --add channels conda-forge
 if conda env list | grep -q "^$ENV_NAME "; then
   echo "[INFO] Env '$ENV_NAME' already exists."
 else
-  conda create -y -n "$ENV_NAME" --override-channels -c conda-forge python=3.11 r-base r-reticulate
+  conda create -y -n "$ENV_NAME" --override-channels -c conda-forge python=3.9 r-base r-reticulate
   echo "[INFO] Env '$ENV_NAME' created."
 fi
 
@@ -52,10 +52,10 @@ pkgs  <- c("reticulate", "devtools", "tidyverse", "talk")
 
 install.packages(pkgs, repos = repos, Ncpus = max(1, parallel::detectCores() - 1))
 
-pyenv <- Sys.getenv("PYTHON_ENV", "textrpp_condaenv")
+pyenv <- Sys.getenv("PYTHON_ENV", "talkrpp_condaenv")
 
 # Create a separate Python env for reticulate (inside the same Conda installation)
-reticulate::conda_create(envname = pyenv, python_version = "3.11")
+reticulate::conda_create(envname = pyenv, python_version = "3.9")
 EOF
 
 echo "[SUCCESS] R packages installed and conda env '$PYTHON_ENV' created."
