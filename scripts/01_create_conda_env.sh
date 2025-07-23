@@ -112,8 +112,8 @@ message("Using CRAN mirror: ", cran_mirror)
 message("Python env name: ", python_env)
 message("R version: ", R.version.string)
 
-req_pkgs <- c("reticulate", "devtools", "tidyverse")
-opt_pkgs <- c("talk")
+req_pkgs <- c("reticulate", "devtools")
+opt_pkgs <- c("tidyverse")
 
 ncores <- max(1, parallel::detectCores() - 1)
 message("Installing required R packages: ", paste(req_pkgs, collapse=", "))
@@ -127,24 +127,29 @@ for (pkg in opt_pkgs) {
   )
 }
 
-library(reticulate)
+devtools::install_github("theharmonylab/talk")
+library(talk)
+talkrpp_install()
+talkrpp_initialize(save_profile = TRUE)
 
-envs <- conda_list()
-if (python_env %in% envs$name) {
-  message("Python env '", python_env, "' already exists.")
-} else {
-  message("Creating Python env '", python_env, "' with Python ", python_version)
-  conda_create(envname = python_env, python_version = python_version)
-}
+#library(reticulate)
 
-py_pkgs <- c("numpy", "pandas")
-if (length(py_pkgs)) {
-  message("Installing Python packages into '", python_env, "': ", paste(py_pkgs, collapse=", "))
-  tryCatch(
-    conda_install(envname = python_env, packages = py_pkgs),
-    error = function(e) message("Warning: could not install Python packages: ", e$message)
-  )
-}
+#envs <- conda_list()
+#if (python_env %in% envs$name) {
+#  message("Python env '", python_env, "' already exists.")
+#} else {
+#  message("Creating Python env '", python_env, "' with Python ", python_version)
+#  conda_create(envname = python_env, python_version = python_version)
+#}
+
+#py_pkgs <- c("numpy", "pandas")
+#if (length(py_pkgs)) {
+#  message("Installing Python packages into '", python_env, "': ", paste(py_pkgs, collapse=", "))
+#  tryCatch(
+#    conda_install(envname = python_env, packages = py_pkgs),
+#    error = function(e) message("Warning: could not install Python packages: ", e$message)
+#  )
+#}
 
 message("Setup completed successfully!")
 RSCRIPT
