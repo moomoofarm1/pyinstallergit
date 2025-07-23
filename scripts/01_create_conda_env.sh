@@ -9,7 +9,9 @@ set -euo pipefail
 readonly ENV_NAME="rbridge"
 readonly PYTHON_ENV="talkrpp_condaenv"
 readonly PYTHON_VERSION="3.9"
-readonly R_PACKAGES=("reticulate" "devtools" "tidyverse" "talk")
+readonly R_VERSION="4.3"  # Specify R version
+readonly R_PACKAGES=("reticulate" "devtools" "tidyverse")  # Removed 'talk' as it may not be available
+readonly R_PACKAGES_OPTIONAL=("talk")  # Optional packages that might not be available
 readonly PYTHON_PACKAGES=("numpy" "pandas")  # Optional packages
 readonly CRAN_MIRROR="${CRAN:-https://cloud.r-project.org}"
 
@@ -83,7 +85,8 @@ setup_r_environment() {
     conda create -y -n "$ENV_NAME" \
         --override-channels -c conda-forge \
         "python=$PYTHON_VERSION" \
-        r-base r-reticulate
+        "r-base=$R_VERSION" \
+        r-reticulate
     
     log_success "Environment '$ENV_NAME' created successfully"
 }
@@ -100,7 +103,6 @@ install_r_packages_and_python_env() {
     local r_script
     read -r -d '' r_script <<'EOF' || true
 # R package installation and Python environment setup
-options(warn = 2)  # Convert warnings to errors
 
 # Get configuration from environment
 cran_mirror <- Sys.getenv("CRAN_MIRROR", "https://cloud.r-project.org")
@@ -109,10 +111,11 @@ python_version <- Sys.getenv("PYTHON_VERSION", "3.9")
 
 cat("Using CRAN mirror:", cran_mirror, "\n")
 cat("Python environment name:", python_env, "\n")
+cat("R version:", R.version.string, "\n")
 
-# Install R packages
-r_packages <- c("reticulate", "devtools", "tidyverse", "talk")
-cat("Installing R packages:", paste(r_packages, collapse = ", "), "\n")
+# Install required R packages
+r_packages <- c("reticulate", "devtools", "tidyverse")
+cat("Installing required R packages:", paste(r_packages, collapse = ", "), "\n")
 
 # Use multiple cores for faster installation
 ncores <- max(1, parallel::detectCores() - 1)
@@ -124,6 +127,18 @@ install.packages(
     Ncpus = ncores,
     dependencies = TRUE
 )
+
+# Try to install optional packages (don't fail if unavailable)
+optional_packages <- c("talk")
+for (pkg in optional_packages) {
+    cat("Attempting to install optional package:", pkg, "\n")
+    tryCatch({
+        install.packages(pkg, repos = cran_mirror, Ncpus = ncores)
+        cat("Successfully installed:", pkg, "\n")
+    }, error = function(e) {
+        cat("Warning: Could not install optional package '", pkg, "': ", e$message, "\n", sep = "")
+    })
+}
 
 # Load reticulate to create Python environment
 library(reticulate)
