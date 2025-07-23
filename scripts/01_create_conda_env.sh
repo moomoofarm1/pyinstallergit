@@ -9,7 +9,7 @@ set -euo pipefail
 readonly ENV_NAME="r-reticulate" # for reticulate itself
 readonly PYTHON_ENV="talkrpp_condaenv" # to run inside the R.
 readonly PYTHON_VERSION="3.9"
-readonly R_VERSION="4.3"  # Specify R version
+readonly R_VERSION="4.4"  # Specify R version
 readonly R_PACKAGES=("reticulate" "devtools" "tidyverse")  # Removed 'talk' as it may not be available
 readonly R_PACKAGES_OPTIONAL=("talk")  # Optional packages that might not be available
 readonly PYTHON_PACKAGES=("numpy" "pandas")  # Optional packages
