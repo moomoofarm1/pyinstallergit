@@ -6,7 +6,9 @@ export LS_PROJECT_ID="1"
 apt update && apt upgrade && \
   apt install -y sudo -y nano && \
   bash scripts/00_bootstrap.sh && \
-  bash scripts/01_create_conda_env.sh
+  source ~/.bashrc
+  
+bash scripts/01_create_conda_env.sh
 
 chmod +x scripts/*.sh
 
