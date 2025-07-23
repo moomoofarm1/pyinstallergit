@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 00_bootstrap.sh
-# Idempotent bootstrap for: system deps, Miniconda (ARM/x86), uv.
+# Idempotent bootstrap for: system deps, Miniconda (ARM/x86) for independent R installation, uv of python program manager before the pyinstaller .
 # Ensures PATH works immediately (no need to reopen shell).
 
 set -euo pipefail
