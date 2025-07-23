@@ -1,0 +1,23 @@
+[project]
+name = "pyinstaller-roberta-demo"
+version = "0.1.0"
+description = "Roberta finetuning demo packaged with PyInstaller using uv"
+requires-python = ">=3.10"
+
+dependencies = [
+  "numpy>=1.26",
+  "scipy>=1.11",
+  "torch>=2.2",
+  "transformers>=4.40",
+  "datasets>=2.18",
+  "accelerate>=0.30",
+  "scikit-learn>=1.4",
+  "noisereduce>=3.0",
+  "label-studio-sdk>=0.0.36",
+  "pyinstaller>=6.3",
+  "rich>=13.7",
+  "requests>=2.32"
+]
+
+[tool.uv]
+# defaults are fine
