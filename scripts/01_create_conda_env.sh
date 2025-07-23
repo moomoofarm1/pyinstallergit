@@ -6,8 +6,8 @@
 set -euo pipefail
 
 # Configuration
-readonly ENV_NAME="rbridge"
-readonly PYTHON_ENV="talkrpp_condaenv"
+readonly ENV_NAME="r-reticulate" # for reticulate itself
+readonly PYTHON_ENV="talkrpp_condaenv" # to run inside the R.
 readonly PYTHON_VERSION="3.9"
 readonly R_VERSION="4.3"  # Specify R version
 readonly R_PACKAGES=("reticulate" "devtools" "tidyverse")  # Removed 'talk' as it may not be available
