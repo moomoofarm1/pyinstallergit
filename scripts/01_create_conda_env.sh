@@ -94,86 +94,80 @@ setup_r_environment() {
 # Install R packages and create Python environment
 install_r_packages_and_python_env() {
     log_info "Installing R packages and setting up Python environment..."
-    
-    # Export environment variable for R script
-    export PYTHON_ENV
-    export CRAN_MIRROR
-    
-    # Create R script content
-    local r_script
-    read -r -d '' r_script <<'EOF' || true
-# R package installation and Python environment setup
 
-# Get configuration from environment
-cran_mirror <- Sys.getenv("CRAN_MIRROR", "https://cloud.r-project.org")
-python_env <- Sys.getenv("PYTHON_ENV", "talkrpp_condaenv")
-python_version <- Sys.getenv("PYTHON_VERSION", "3.9")
+    export PYTHON_ENV CRAN_MIRROR PYTHON_VERSION
 
-cat("Using CRAN mirror:", cran_mirror, "\n")
-cat("Python environment name:", python_env, "\n")
-cat("R version:", R.version.string, "\n")
+    # Create a temp R script
+    TMP_R="$(mktemp -t rsetup.XXXXXX.R)"
 
-# Install required R packages
-r_packages <- c("reticulate", "devtools", "tidyverse")
-cat("Installing required R packages:", paste(r_packages, collapse = ", "), "\n")
+    cat >"$TMP_R" <<'RSCRIPT'
+options(warn=1)           # flush warnings immediately
+flush.console <- function() {}  # on some platforms this is a no-op, but keep it.
 
-# Use multiple cores for faster installation
+cran_mirror   <- Sys.getenv("CRAN_MIRROR", "https://cloud.r-project.org")
+python_env    <- Sys.getenv("PYTHON_ENV", "talkrpp_condaenv")
+python_version<- Sys.getenv("PYTHON_VERSION", "3.9")
+
+message("Using CRAN mirror: ", cran_mirror)
+message("Python env name: ", python_env)
+message("R version: ", R.version.string)
+
+req_pkgs <- c("reticulate", "devtools", "tidyverse")
+opt_pkgs <- c("talk")
+
 ncores <- max(1, parallel::detectCores() - 1)
-cat("Using", ncores, "cores for installation\n")
+message("Installing required R packages: ", paste(req_pkgs, collapse=", "))
+install.packages(req_pkgs, repos = cran_mirror, Ncpus = ncores, dependencies = TRUE)
 
-install.packages(
-    r_packages, 
-    repos = cran_mirror, 
-    Ncpus = ncores,
-    dependencies = TRUE
-)
-
-# Try to install optional packages (don't fail if unavailable)
-optional_packages <- c("talk")
-for (pkg in optional_packages) {
-    cat("Attempting to install optional package:", pkg, "\n")
-    tryCatch({
-        install.packages(pkg, repos = cran_mirror, Ncpus = ncores)
-        cat("Successfully installed:", pkg, "\n")
-    }, error = function(e) {
-        cat("Warning: Could not install optional package '", pkg, "': ", e$message, "\n", sep = "")
-    })
+for (pkg in opt_pkgs) {
+  message("Attempting optional package: ", pkg)
+  tryCatch(
+    install.packages(pkg, repos = cran_mirror, Ncpus = ncores),
+    error = function(e) message("Optional '", pkg, "' failed: ", e$message)
+  )
 }
 
-# Load reticulate to create Python environment
 library(reticulate)
 
-# Check if Python environment already exists
-existing_envs <- conda_list()
-if (python_env %in% existing_envs$name) {
-    cat("Python environment '", python_env, "' already exists\n", sep = "")
+envs <- conda_list()
+if (python_env %in% envs$name) {
+  message("Python env '", python_env, "' already exists.")
 } else {
-    cat("Creating Python environment '", python_env, "'\n", sep = "")
-    conda_create(envname = python_env, python_version = python_version)
+  message("Creating Python env '", python_env, "' with Python ", python_version)
+  conda_create(envname = python_env, python_version = python_version)
 }
 
-# Optional: Install common Python packages
-python_packages <- c("numpy", "pandas")
-if (length(python_packages) > 0) {
-    cat("Installing Python packages:", paste(python_packages, collapse = ", "), "\n")
-    tryCatch({
-        conda_install(envname = python_env, packages = python_packages)
-    }, error = function(e) {
-        cat("Warning: Could not install Python packages:", e$message, "\n")
-    })
+py_pkgs <- c("numpy", "pandas")
+if (length(py_pkgs)) {
+  message("Installing Python packages into '", python_env, "': ", paste(py_pkgs, collapse=", "))
+  tryCatch(
+    conda_install(envname = python_env, packages = py_pkgs),
+    error = function(e) message("Warning: could not install Python packages: ", e$message)
+  )
 }
 
-cat("Setup completed successfully!\n")
-EOF
+message("Setup completed successfully!")
+RSCRIPT
 
-    # Run R script in the conda environment
-    if conda run -n "$ENV_NAME" Rscript -e "$r_script"; then
+    # Run it with no capture and line-buffering
+    # stdbuf is in coreutils (apt-get install coreutils if missing; on mac use 'script -q /dev/null ...')
+    if command -v stdbuf >/dev/null 2>&1; then
+        STD_BUF="stdbuf -oL -eL"
+    else
+        STD_BUF=""
+    fi
+
+    if conda run --no-capture-output -n "$ENV_NAME" $STD_BUF Rscript "$TMP_R"; then
         log_success "R packages and Python environment setup completed"
     else
         log_error "Failed to install R packages or create Python environment"
+        rm -f "$TMP_R"
         return 1
     fi
+
+    rm -f "$TMP_R"
 }
+
 
 # Display usage instructions
 show_usage_instructions() {
