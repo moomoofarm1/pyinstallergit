@@ -48,7 +48,7 @@ export PYTHON_ENV
 
 conda run -n "$ENV_NAME" Rscript - <<'EOF'
 repos <- if (nzchar(Sys.getenv("CRAN"))) Sys.getenv("CRAN") else "https://cloud.r-project.org"
-pkgs  <- c("reticulate", "devtools", "tidyverse", "talk")
+pkgs  <- c("devtools", "reticulate", "tidyverse", "talk")
 
 install.packages(pkgs, repos = repos, Ncpus = max(1, parallel::detectCores() - 1))
 
