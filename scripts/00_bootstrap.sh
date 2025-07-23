@@ -126,6 +126,6 @@ else
 fi
 
 echo "[SUCCESS] Bootstrap complete!"
-echo "Note: In new shells, run 'source ~/.bashrc' or restart your shell to use these tools."
+# echo "Note: In new shells, run 'source ~/.bashrc' or restart your shell to use these tools."
 
-source ~/.bashrc
+echo "Copy and run command in the terminal: source ~/.bashrc"
