@@ -22,7 +22,8 @@ readonly CRAN_MIRROR="${CRAN:-https://cloud.r-project.org}"
 
 # R pkgs to install via conda (fewer compile issues)
 readonly CONDA_R_PACKAGES=( 
-  r-reticulate r-remotes r-devtools r-tidyverse git
+  r-reticulate r-remotes r-devtools git
+  #r-tidyverse 
 )
 
 # Python pkgs to install in PYTHON_ENV
