@@ -14,7 +14,6 @@ from metrics import diarization_metrics
 
 MODEL_ID = "syvai/speaker-diarization-3.1"
 
-
 def run_active_learning(
     iterations,
     query_k,
@@ -81,8 +80,7 @@ def run_active_learning(
 
     model.save_pretrained(output_dir)
 
-
-def _fine_tune_model(model, processor, labeled, epochs, batch_size, lr):
+def _fine_tune_model(model, processor, labeled, epochs, batch_size, lr=1e-5):
     """Fine-tune on labeled segments using a DataLoader."""
     loader = DataLoader(
         labeled,
@@ -111,4 +109,6 @@ def _uncertainty_score(model, processor, example):
     mean_conf = probs.max(dim=-1).values.mean().item()
     return 1 - mean_conf
 
-
+def _create_batches(examples, batch_size, processor):
+    for i in range(0, len(examples), batch_size):
+        yield segments_to_frame_labels(examples[i:i + batch_size], processor)
