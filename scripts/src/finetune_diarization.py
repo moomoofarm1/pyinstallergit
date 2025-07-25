@@ -1,7 +1,11 @@
 # ===================== src/finetune_diarization.py =====================
 import os
-from datasets import load_dataset, Audio
-from transformers import AutoProcessor, AutoModelForAudioFrameClassification, TrainingArguments, Trainer
+from transformers import (
+    AutoProcessor,
+    AutoModelForAudioFrameClassification,
+    TrainingArguments,
+    Trainer,
+)
 import torch
 from metrics import diarization_metrics
 from data_io import make_rttm_from_segments, segments_from_dataset
@@ -11,8 +15,9 @@ MODEL_ID = "syvai/speaker-diarization-3.1"
 
 def prepare_dataset(sample_hours=0.1):
     """Download a tiny public dataset with speaker labels (AMI small subset via HF)."""
-    ds = load_dataset("ami_iwslt/ami", "sdm", split="train[:2%]")  # tiny subset
-    # ensure audio column
+    from datasets import load_dataset, Audio
+
+    ds = load_dataset("ami_iwslt/ami", "sdm", split="train[:2%]")
     if "audio" not in ds.column_names:
         ds = ds.cast_column("audio", Audio())
     return ds
