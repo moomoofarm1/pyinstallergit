@@ -3,6 +3,7 @@ import os
 from label_studio_sdk import Client
 from transformers import AutoProcessor, AutoModelForAudioFrameClassification
 import torch
+from torch.utils.data import DataLoader
 from data_io import (
     download_unlabeled_pool,
     annotate_segments_interactive,
@@ -41,10 +42,12 @@ def run_active_learning(
     for it in range(iterations):
         # Fine-tune on current labeled set if any
         if labeled:
-            loss = None
-            for _ in range(fine_tune_epochs):
-                for batch in _create_batches(labeled, batch_size, processor):
-                    loss = _one_step_update(model, batch, lr)
+            loss = _fine_tune_model(
+                model, processor, labeled,
+                epochs=fine_tune_epochs,
+                batch_size=batch_size,
+                lr=lr,
+            )
             print(f"[IT {it}] fine-tune loss={loss:.4f}, labeled={len(labeled)}")
 
         # Score pool with uncertainty
@@ -78,14 +81,25 @@ def run_active_learning(
     model.save_pretrained(output_dir)
 
 
-def _one_step_update(model, batch, lr=1e-5):
-    model.train()
+def _fine_tune_model(model, processor, labeled, epochs, batch_size, lr):
+    """Fine-tune on labeled segments using a DataLoader."""
+    loader = DataLoader(
+        labeled,
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=lambda b: segments_to_frame_labels(b, processor),
+    )
     optim = torch.optim.AdamW(model.parameters(), lr=lr)
-    optim.zero_grad()
-    out = model(**batch)
-    out.loss.backward()
-    optim.step()
-    return out.loss.item()
+    loss = None
+    for _ in range(epochs):
+        for batch in loader:
+            model.train()
+            optim.zero_grad()
+            out = model(**batch)
+            out.loss.backward()
+            optim.step()
+            loss = out.loss.item()
+    return loss
 
 
 def _uncertainty_score(model, processor, example):
@@ -97,6 +111,3 @@ def _uncertainty_score(model, processor, example):
     return 1 - mean_conf
 
 
-def _create_batches(examples, batch_size, processor):
-    for i in range(0, len(examples), batch_size):
-        yield segments_to_frame_labels(examples[i:i + batch_size], processor)
