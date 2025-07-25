@@ -18,6 +18,9 @@ def main():
     al.add_argument("--iterations", type=int, default=3)
     al.add_argument("--query_k", type=int, default=5)
     al.add_argument("--output_dir", type=str, default="checkpoints/active_learning")
+    al.add_argument("--batch_size", type=int, default=2)
+    al.add_argument("--lr", type=float, default=1e-5)
+    al.add_argument("--ft_epochs", type=int, default=1, help="Fine-tune epochs per iteration")
 
     args = p.parse_args()
     if args.cmd == "finetune":
@@ -25,7 +28,8 @@ def main():
                      output_dir=args.output_dir, sample_hours=args.sample_hours)
     else:
         run_active_learning(iterations=args.iterations, query_k=args.query_k,
-                            output_dir=args.output_dir)
+                            output_dir=args.output_dir, batch_size=args.batch_size,
+                            lr=args.lr, fine_tune_epochs=args.ft_epochs)
 
 if __name__ == "__main__":
     main()
