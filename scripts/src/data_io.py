@@ -1,21 +1,26 @@
 # ===================== src/data_io.py =====================
-import torch
-from datasets import load_dataset, Audio
+import os
 import random
+import tempfile
+from typing import List, Dict
 
-def download_unlabeled_pool(limit=30):
+import torch
+
+def download_unlabeled_pool(limit: int = 30):
+    """Download a small pool of unlabeled audio examples."""
+    from datasets import load_dataset, Audio
+
     ds = load_dataset("ami_iwslt/ami", "sdm", split="train[:5%]")
     ds = ds.cast_column("audio", Audio())
     ds = ds.shuffle(seed=123)
     return [ds[i] for i in range(min(limit, len(ds)))]
 
 
-def annotate_segments_interactive(items):
-    """Placeholder: simulate human labeling (2 speakers random). Replace with Label Studio client."""
+def annotate_segments_interactive(items: List[Dict]):
+    """Simple CLI labeling fallback generating random segments."""
     labeled = []
     for ex in items:
         duration = ex["audio"]["array"].shape[0] / ex["audio"]["sampling_rate"]
-        # random segments
         n = random.randint(1, 3)
         segs = []
         for _ in range(n):
@@ -25,6 +30,52 @@ def annotate_segments_interactive(items):
         ex["segments"] = segs
         labeled.append(ex)
     return labeled
+
+
+def annotate_segments_labelstudio(items: List[Dict], project) -> List[Dict]:
+    """Send audio segments to Label Studio and wait for annotations."""
+    from scipy.io import wavfile
+
+    tasks = []
+    paths = []
+    for idx, ex in enumerate(items):
+        fd, path = tempfile.mkstemp(suffix=".wav")
+        os.close(fd)
+        wavfile.write(path, ex["audio"]["sampling_rate"], ex["audio"]["array"])
+        tasks.append({"data": {"audio": path}})
+        paths.append(path)
+
+    task_ids = project.import_tasks(tasks)
+    print(f"Imported {len(task_ids)} tasks to project {project.id}. Label them in the UI then press Enter to continue.")
+    input("Press Enter after labeling...")
+
+    labeled = []
+    for tid, ex, audio_path in zip(task_ids, items, paths):
+        task = project.get_task(tid)
+        anns = task.get("annotations") or []
+        if not anns:
+            continue
+        segments = []
+        for res in anns[0].get("result", []):
+            if res.get("type") == "labels":
+                seg = {
+                    "start": res["value"].get("start", 0.0),
+                    "end": res["value"].get("end", 0.0),
+                    "speaker_id": _label_to_id(res["value"].get("labels", ["0"])[0]),
+                }
+                segments.append(seg)
+        ex["segments"] = segments
+        labeled.append(ex)
+        os.remove(audio_path)
+    return labeled
+
+
+def _label_to_id(label: str) -> int:
+    try:
+        return int(label.strip().split()[-1])
+    except Exception:
+        digits = "".join(ch for ch in label if ch.isdigit())
+        return int(digits) if digits else 0
 
 
 def segments_from_dataset(ex):

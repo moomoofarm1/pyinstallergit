@@ -1,7 +1,11 @@
 # ===================== src/finetune_diarization.py =====================
 import os
-from datasets import load_dataset, Audio
-from transformers import AutoProcessor, AutoModelForAudioFrameClassification, TrainingArguments, Trainer
+from transformers import (
+    AutoProcessor,
+    AutoModelForAudioFrameClassification,
+    TrainingArguments,
+    Trainer,
+)
 import torch
 from metrics import diarization_metrics
 from data_io import make_rttm_from_segments, segments_from_dataset
@@ -11,8 +15,9 @@ MODEL_ID = "syvai/speaker-diarization-3.1"
 
 def prepare_dataset(sample_hours=0.1):
     """Download a tiny public dataset with speaker labels (AMI small subset via HF)."""
-    ds = load_dataset("ami_iwslt/ami", "sdm", split="train[:2%]")  # tiny subset
-    # ensure audio column
+    from datasets import load_dataset, Audio
+
+    ds = load_dataset("ami_iwslt/ami", "sdm", split="train[:2%]")
     if "audio" not in ds.column_names:
         ds = ds.cast_column("audio", Audio())
     return ds
@@ -46,7 +51,7 @@ def create_frame_labels(example, frame_hz=50):
     return example
 
 
-def run_finetune(epochs, batch_size, lr, output_dir, sample_hours):
+def run_finetune(epochs, batch_size, lr, output_dir, sample_hours, model_id=MODEL_ID):
     os.makedirs(output_dir, exist_ok=True)
     ds = prepare_dataset(sample_hours)
 
@@ -54,8 +59,8 @@ def run_finetune(epochs, batch_size, lr, output_dir, sample_hours):
     if "segments" not in ds.column_names:
         ds = ds.map(lambda ex: {"segments": segments_from_dataset(ex)}, desc="gen segments")
 
-    processor = AutoProcessor.from_pretrained(MODEL_ID)
-    model = AutoModelForAudioFrameClassification.from_pretrained(MODEL_ID)
+    processor = AutoProcessor.from_pretrained(model_id)
+    model = AutoModelForAudioFrameClassification.from_pretrained(model_id)
 
     ds = ds.map(lambda ex: create_frame_labels(ex), desc="frame labels")
     ds_train = ds.shuffle(seed=42).select(range(min(20, len(ds))))
