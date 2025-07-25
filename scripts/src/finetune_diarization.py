@@ -51,7 +51,7 @@ def create_frame_labels(example, frame_hz=50):
     return example
 
 
-def run_finetune(epochs, batch_size, lr, output_dir, sample_hours):
+def run_finetune(epochs, batch_size, lr, output_dir, sample_hours, model_id=MODEL_ID):
     os.makedirs(output_dir, exist_ok=True)
     ds = prepare_dataset(sample_hours)
 
@@ -59,8 +59,8 @@ def run_finetune(epochs, batch_size, lr, output_dir, sample_hours):
     if "segments" not in ds.column_names:
         ds = ds.map(lambda ex: {"segments": segments_from_dataset(ex)}, desc="gen segments")
 
-    processor = AutoProcessor.from_pretrained(MODEL_ID)
-    model = AutoModelForAudioFrameClassification.from_pretrained(MODEL_ID)
+    processor = AutoProcessor.from_pretrained(model_id)
+    model = AutoModelForAudioFrameClassification.from_pretrained(model_id)
 
     ds = ds.map(lambda ex: create_frame_labels(ex), desc="frame labels")
     ds_train = ds.shuffle(seed=42).select(range(min(20, len(ds))))

@@ -25,10 +25,11 @@ def run_active_learning(
     ls_url=None,
     ls_token=None,
     project_id=None,
+    model_id=MODEL_ID,
 ):
     os.makedirs(output_dir, exist_ok=True)
-    processor = AutoProcessor.from_pretrained(MODEL_ID)
-    model = AutoModelForAudioFrameClassification.from_pretrained(MODEL_ID)
+    processor = AutoProcessor.from_pretrained(model_id)
+    model = AutoModelForAudioFrameClassification.from_pretrained(model_id)
 
     client = None
     project = None
