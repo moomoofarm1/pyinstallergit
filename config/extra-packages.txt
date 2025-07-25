@@ -1,0 +1,6 @@
+# Add packages here later, one per line, optional ==version
+pandas==2.2.2
+scikit-learn
+loguru
+tqdm
+# lightning # torch lightning
