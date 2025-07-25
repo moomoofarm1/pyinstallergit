@@ -26,6 +26,17 @@ pyinstaller-demo/
 ├── README.md
 └── .gitignore
 ```
-</details> 
+</details>
+
+### Active learning fine-tuning
+
+The `active-learn` command runs an uncertainty sampling loop and fine-tunes
+`syvai/speaker-diarization-3.1` as new segments are labeled. Example:
+
+```bash
+python -m src.__main__ active-learn --iterations 5 --query_k 3 \
+  --lr 3e-5 --batch_size 2 --ft_epochs 2
+```
+
 
 
