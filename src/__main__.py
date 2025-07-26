@@ -27,7 +27,7 @@ def main():
 
     args = p.parse_args()
     if args.cmd == "finetune":
-        from finetune_diarization import run_finetune
+        from .finetune_diarization import run_finetune
 
         run_finetune(
             epochs=args.epochs,
@@ -38,7 +38,7 @@ def main():
             model_id=args.model_id,
         )
     else:
-        from active_learning_diarization import run_active_learning
+        from .active_learning_diarization import run_active_learning
 
         run_active_learning(
             iterations=args.iterations,
