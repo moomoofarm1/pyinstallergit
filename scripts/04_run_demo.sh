@@ -8,4 +8,4 @@ ensure_in_path
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-uv run python -m src.__main__ --demo
+uv run python -m src/__main__.py --demo
