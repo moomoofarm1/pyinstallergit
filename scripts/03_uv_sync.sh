@@ -46,7 +46,7 @@ fi
 
 # 4. Add core deps if missing
 CORE_PKGS=(
-  numpy scipy torch transformers datasets accelerate scikit-learn
+  numpy scipy torch transformers datasets accelerate evaluate scikit-learn
   noisereduce label-studio-sdk pyinstaller rich requests
 )
 for pkg in "${CORE_PKGS[@]}"; do
