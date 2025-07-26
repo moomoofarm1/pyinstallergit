@@ -4,13 +4,13 @@ from label_studio_sdk import Client
 from transformers import AutoProcessor, AutoModelForAudioFrameClassification
 import torch
 from torch.utils.data import DataLoader
-from data_io import (
+from .data_io import (
     download_unlabeled_pool,
     annotate_segments_interactive,
     segments_to_frame_labels,
     annotate_segments_labelstudio,
 )
-from metrics import diarization_metrics
+from .metrics import diarization_metrics
 
 MODEL_ID = "syvai/speaker-diarization-3.1"
 
