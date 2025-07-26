@@ -26,6 +26,26 @@ pyinstaller-demo/
 ├── README.md
 └── .gitignore
 ```
-</details> 
+</details>
+
+### Active learning fine-tuning
+
+The `active-learn` command runs an uncertainty sampling loop and fine-tunes
+`syvai/speaker-diarization-3.1` as new segments are labeled. Example:
+
+```bash
+python -m src.__main__ active-learn --iterations 5 --query_k 3 \
+  --lr 3e-5 --batch_size 2 --ft_epochs 2 \
+  --ls_token YOUR_TOKEN --project_id 1 \
+  --model_id syvai/speaker-diarization-3.1
+```
 
 
+`--ls_token` and `--project_id` configure the Label Studio project used for
+human-in-the-loop annotation. If omitted, a simple CLI simulator is used.
+`--ls_url` controls the Label Studio server address.
+
+During each iteration the script fine-tunes `syvai/speaker-diarization-3.1`
+on all labeled segments using mini‑batch updates. Use `--batch_size`, `--lr`
+and `--ft_epochs` to control this process.
+`--model_id` can override the base model (defaults to `syvai/speaker-diarization-3.1`).
