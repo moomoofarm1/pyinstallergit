@@ -49,3 +49,7 @@ During each iteration the script fine-tunes `syvai/speaker-diarization-3.1`
 on all labeled segments using mini‑batch updates. Use `--batch_size`, `--lr`
 and `--ft_epochs` to control this process.
 `--model_id` can override the base model (defaults to `syvai/speaker-diarization-3.1`).
+### Running the active learning demo
+
+Execute `scripts/04_run_demos.sh` to run the uncertainty-sampling loop over a small audio pool and save the model checkpoint.
+
