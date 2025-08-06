@@ -53,3 +53,11 @@ and `--ft_epochs` to control this process.
 
 Execute `scripts/04_run_demos.sh` to run the uncertainty-sampling loop over a small audio pool and save the model checkpoint.
 
+<!-- 
+Notes:
+https://mlops.swiss-ai-center.ch/part-4-labeling-the-data-and-retrain/chapter-43-link-the-model-to-label-studio/?utm_source=chatgpt.com
+ -->
+
+
+
+
