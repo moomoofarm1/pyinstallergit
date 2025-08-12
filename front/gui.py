@@ -14,7 +14,7 @@ def start_server():
         # Run uvicorn as a subprocess
         # --reload is optional; remove in production
         server_process = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "9090"]
+            [sys.executable, "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "9090"]
         )
 
 def stop_server_and_exit():
