@@ -1,47 +1,46 @@
 import tkinter as tk
+import threading
 import subprocess
+import sys
 import os
 import signal
-import sys
 
-server_process = None  # Will store the subprocess.Popen object
+# Store process handle so we can stop it
+server_process = None
 
 def start_server():
     global server_process
     if server_process is None:
-        # Start FastAPI server in a subprocess
+        # Run uvicorn as a subprocess
+        # --reload is optional; remove in production
         server_process = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "9090"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            [sys.executable, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "9090"]
         )
-        status_label.config(text="Server running...", fg="green")
-    else:
-        status_label.config(text="Server is already running", fg="orange")
 
-def stop_server():
+def stop_server_and_exit():
     global server_process
-    if server_process is not None:
-        # Send termination signal
-        os.kill(server_process.pid, signal.SIGTERM)
+    if server_process:
+        # Send SIGTERM to uvicorn
+        if os.name == 'nt':  # Windows
+            server_process.terminate()
+        else:  # Unix/Mac
+            os.kill(server_process.pid, signal.SIGTERM)
         server_process = None
-        status_label.config(text="Server stopped.", fg="red")
-        root.after(500, root.destroy)  # Close Tkinter window
-        sys.exit(0)  # Terminate Python runtime
-    else:
-        status_label.config(text="Server is not running", fg="orange")
 
-# Create GUI
-root = tk.Tk()
-root.title("FastAPI Server Controller")
+    # Close the entire Python runtime
+    root.destroy()
+    sys.exit(0)
 
-start_btn = tk.Button(root, text="Start Server", command=start_server, bg="lightgreen", width=20)
-start_btn.pack(pady=10)
+def run_gui():
+    global root
+    root = tk.Tk()
+    root.title("FastAPI Server Controller")
+    root.geometry("300x150")
 
-stop_btn = tk.Button(root, text="Stop Server & Exit", command=stop_server, bg="lightcoral", width=20)
-stop_btn.pack(pady=10)
+    start_btn = tk.Button(root, text="Start Server", command=start_server, width=20, height=2)
+    start_btn.pack(pady=10)
 
-status_label = tk.Label(root, text="Server not running", fg="red")
-status_label.pack(pady=10)
+    stop_btn = tk.Button(root, text="Stop Server & Exit", command=stop_server_and_exit, width=20, height=2)
+    stop_btn.pack(pady=10)
 
-root.mainloop()
+    root.mainloop()
