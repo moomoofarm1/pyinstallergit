@@ -1,5 +1,5 @@
 # from fastapi import FastAPI
-# from label_studio_ml.api import register_model
+# from label_studio_ml.api import register_model # register_model not work
 # from back.llm_backend import LLMInteractiveModel
 
 # app = FastAPI()

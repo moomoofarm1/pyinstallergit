@@ -37,13 +37,13 @@ def stop_server_and_exit():
 def run_gui():
     global root
     root = tk.Tk()
-    root.title("FastAPI Server Controller")
+    root.title("ALF Server Controller")
     root.geometry("300x150")
 
-    start_btn = tk.Button(root, text="Start Server", command=start_server, width=20, height=2)
+    start_btn = tk.Button(root, text="Start ALF", command=start_server, width=20, height=2)
     start_btn.pack(pady=10)
 
-    stop_btn = tk.Button(root, text="Stop Server & Exit", command=stop_server_and_exit, width=20, height=2)
+    stop_btn = tk.Button(root, text="Stop ALF & Exit", command=stop_server_and_exit, width=20, height=2)
     stop_btn.pack(pady=10)
 
     root.mainloop()
