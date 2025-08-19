@@ -78,7 +78,7 @@ def uninstall_label_studio():
                         pid = parts[-1]
                         print(f"Process {pid} is using port 8080")
                         # Kill by PID
-                        subprocess.run(['taskkill', '/F', '/PID', pid])
+                        subprocess.run(['taskkill', '/F', '/PID', pid]) # only for windows
                         print(f"Killed process {pid}")
 
         except Exception:
