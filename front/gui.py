@@ -34,16 +34,37 @@ def stop_server_and_exit():
     root.destroy()
     sys.exit(0)
 
+def install_label_studio():
+    threading.Thread(
+        target=lambda: subprocess.call([sys.executable, "-m", "pip", "install", "label-studio"]),
+        daemon=True
+    ).start()
+
+def uninstall_label_studio():
+    threading.Thread(
+        target=lambda: subprocess.call([sys.executable, "-m", "pip", "uninstall", "-y", "label-studio"]),
+        daemon=True
+    ).start()
+
 def run_gui():
     global root
     root = tk.Tk()
     root.title("ALF Server Controller")
-    root.geometry("300x150")
+    root.geometry("300x250")
 
-    start_btn = tk.Button(root, text="Start ALF", command=start_server, width=20, height=2)
-    start_btn.pack(pady=10)
+    start_btn = tk.Button(root, text="Start ALF", command=start_server, width=25, height=2)
+    start_btn.pack(pady=5)
 
-    stop_btn = tk.Button(root, text="Stop ALF & Exit", command=stop_server_and_exit, width=20, height=2)
-    stop_btn.pack(pady=10)
+    stop_btn = tk.Button(root, text="Stop ALF & Exit", command=stop_server_and_exit, width=25, height=2)
+    stop_btn.pack(pady=5)
+
+    install_btn = tk.Button(root, text="Step 1. Install label-studio", command=install_label_studio, width=25, height=2)
+    install_btn.pack(pady=5)
+
+    uninstall_btn = tk.Button(root, text="Final step. Uninstall label-studio", command=uninstall_label_studio, width=25, height=2)
+    uninstall_btn.pack(pady=5)
 
     root.mainloop()
+
+if __name__ == "__main__":
+    run_gui()
