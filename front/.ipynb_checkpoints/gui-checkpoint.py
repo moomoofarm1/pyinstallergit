@@ -2,13 +2,13 @@ import tkinter as tk
 from tkinter import ttk
 import threading
 import subprocess
-import sys
-import os
+import sys, os
 import signal
 import webbrowser
 import time
 import shutil
 from pathlib import Path
+import platform
 
 server_process = None
 progress_bar = None
@@ -66,14 +66,29 @@ def uninstall_label_studio():
     progress_bar.start(10)
 
     def task():
-        # Try stopping Label Studio if running
         try:
-            subprocess.run(["label-studio", "stop"], capture_output=True, text=True)
+            # Find what's using port 8080
+            result = subprocess.run(['netstat', '-ano'], capture_output=True, text=True)
+    
+            for line in result.stdout.split('\n'):
+                if ':8080' in line and 'LISTENING' in line:
+                # Extract PID (last column)
+                    parts = line.split()
+                    if parts:
+                        pid = parts[-1]
+                        print(f"Process {pid} is using port 8080")
+                        # Kill by PID
+                        subprocess.run(['taskkill', '/F', '/PID', pid])
+                        print(f"Killed process {pid}")
+
         except Exception:
-            pass  # Ignore if not running or stop command fails
+            sys.exit()  # Ignore if not running or stop command fails, pkill -9 -f label-studio
 
         # Uninstall package
-        subprocess.call(["uv", "pip", "uninstall", "label-studio"])
+        try:
+            subprocess.call(["uv", "pip", "uninstall", "label-studio"])
+        except:
+            exit()
 
         # Remove stored credentials/configs
         # if os.name == "nt":  # Windows
@@ -81,8 +96,8 @@ def uninstall_label_studio():
         # else:  # Linux/Mac
         #     ls_dir = Path.home() / ".local" / "share" / "label-studio"
 
-        if ls_dir.exists():
-            shutil.rmtree(ls_dir, ignore_errors=True)
+        #if ls_dir.exists():
+        #    shutil.rmtree(ls_dir, ignore_errors=True)
 
         root.after(0, stop_progress_bar)
         root.after(0, lambda: update_status("label-studio successfully stopped and removed!"))
