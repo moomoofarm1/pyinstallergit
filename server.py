@@ -7,16 +7,15 @@
 # model = LLMInteractiveModel()
 # register_model(app, model)
 
-from fastapi import FastAPI
+import os
+from label_studio_ml.api import init_app
 from back.llm_backend import LLMInteractiveModel
 
-app = FastAPI()
-model = LLMInteractiveModel()
+# Read Hugging Face token from environment (recommended way)
+HF_TOKEN = os.getenv("HF_TOKEN", None)
 
-@app.get("/health")
-def health():
-    return {"status": "UP"}
+# Initialize model with optional token
+model = LLMInteractiveModel(hf_token=HF_TOKEN, model_name="openai/whisper-small")
 
-@app.post("/predict")
-def predict(tasks: list):
-    return model.predict(tasks)
+# Wrap into FastAPI app
+app = init_app(model=model)

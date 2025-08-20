@@ -17,6 +17,8 @@ status_label = None
 def start_server():
     global server_process
     if server_process is None:
+        env = os.environ.copy()
+        env["HF_TOKEN"] = None  # your_huggingface_token_here, or read from config
         # Start server in a background process
         server_process = subprocess.Popen(
             [sys.executable, "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "9090"]
