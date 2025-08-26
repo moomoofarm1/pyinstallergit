@@ -29,13 +29,22 @@ status_label = None
 def start_server():
     global server_process
     if server_process is None:
+        # Forward the current environment so a user-set HF_TOKEN is respected
         env = os.environ.copy()
-        env["HF_TOKEN"] = "your_hf_token_here"  # put your Hugging Face token
 
         # Start FastAPI backend server
         server_process = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "9090"],
-            env=env
+            [
+                sys.executable,
+                "-m",
+                "uvicorn",
+                "server:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "9090",
+            ],
+            env=env,
         )
 
         # Launch delayed registration in a background thread
@@ -47,7 +56,7 @@ def start_server():
 def delayed_register():
     time.sleep(5)
     register_backend()
-    webbrowser.open("http://localhost:9100")  # optional
+    webbrowser.open("http://localhost:9090")  # optional
 
 def open_browser_delayed():
     time.sleep(2)  # wait for server to boot
@@ -55,10 +64,18 @@ def open_browser_delayed():
 
 def register_backend():
     try:
-        subprocess.run([
-            sys.executable, "-m", "label_studio_ml", "init",
-            "my_backend", "--from", "local://localhost:9100"
-        ], check=True)
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "label_studio_ml",
+                "init",
+                "my_backend",
+                "--from",
+                "local://localhost:9090",
+            ],
+            check=True,
+        )
         print("✅ Backend registered with Label Studio")
     except subprocess.CalledProcessError as e:
         print("⚠️ Could not register backend:", e)
