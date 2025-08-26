@@ -20,29 +20,29 @@ class LLMInteractiveModel(LabelStudioMLBase):
         print(f"Loaded Whisper model: {model_name}")
 
     def predict(self, tasks, **kwargs):
-        """Transcribe audio from Label Studio tasks"""
-        results = []
-        for task in tasks:
-            audio_path = task['data'].get('audio')  # LS provides audio URL/path
+    results = []
+    for task in tasks:
+        audio_path = task['data'].get('audio')
 
-            if not audio_path:
-                continue
+        if not audio_path:
+            continue
 
-            # Hugging Face pipeline supports file paths and URLs
+        try:
             transcription = self.transcriber(audio_path)["text"]
+        except Exception as e:
+            transcription = f"[ERROR: {e}]"
 
-            results.append({
-                'result': [{
-                    'from_name': 'transcription',
-                    'to_name': 'audio',
-                    'type': 'textarea',
-                    'value': {
-                        'text': [transcription]
-                    }
-                }]
-            })
-
-        return results
+        results.append({
+            'result': [{
+                'from_name': 'transcription',
+                'to_name': 'audio',
+                'type': 'textarea',
+                'value': {
+                    'text': [transcription]
+                }
+            }]
+        })
+    return results
 
     def fit(self, completions, workdir=None, **kwargs):
         # Optional fine-tuning could go here
