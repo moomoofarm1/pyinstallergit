@@ -1,2 +1,5 @@
 #!/usr/bin/env bash
-pwd
+
+# Run all pytest-based tests in this directory.
+set -e
+pytest "$(dirname "$0")"
