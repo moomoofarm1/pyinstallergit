@@ -14,21 +14,54 @@ server_process = None
 progress_bar = None
 status_label = None
 
+# def start_server():
+#     global server_process
+#     if server_process is None:
+#         env = os.environ.copy()
+#         env["HF_TOKEN"] = None  # your_huggingface_token_here, or read from config
+#         # Start server in a background process
+#         server_process = subprocess.Popen(
+#             [sys.executable, "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "9090"]
+#         )
+#         # Give it a short delay to start up, then open in browser
+#         threading.Thread(target=open_browser_delayed, daemon=True).start()
+
 def start_server():
     global server_process
     if server_process is None:
         env = os.environ.copy()
-        env["HF_TOKEN"] = None  # your_huggingface_token_here, or read from config
-        # Start server in a background process
+        env["HF_TOKEN"] = "your_hf_token_here"  # put your Hugging Face token
+
+        # Start FastAPI backend server
         server_process = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "9090"]
+            [sys.executable, "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "9090"],
+            env=env
         )
-        # Give it a short delay to start up, then open in browser
+
+        # Launch delayed registration in a background thread
+        threading.Thread(target=delayed_register, daemon=True).start()
+
+        # Optional: open backend docs
         threading.Thread(target=open_browser_delayed, daemon=True).start()
+        
+def delayed_register():
+    time.sleep(5)
+    register_backend()
+    webbrowser.open("http://localhost:9100")  # optional
 
 def open_browser_delayed():
     time.sleep(2)  # wait for server to boot
     webbrowser.open("http://127.0.0.1:9090")
+
+def register_backend():
+    try:
+        subprocess.run([
+            sys.executable, "-m", "label_studio_ml", "init",
+            "my_backend", "--from", "local://localhost:9100"
+        ], check=True)
+        print("✅ Backend registered with Label Studio")
+    except subprocess.CalledProcessError as e:
+        print("⚠️ Could not register backend:", e)
 
 def stop_server_and_exit():
     global server_process
