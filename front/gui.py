@@ -462,7 +462,12 @@ class LabelStudioController:
 def run_gui():
     """Main entry point for the GUI application."""
     controller = LabelStudioController()
-    controller.run_gui()
+    try:
+        controller.run_gui()
+    except tk.TclError as exc:
+        # Gracefully handle environments without a display (e.g. CI/headless)
+        print(f"Tkinter GUI cannot be started: {exc}")
+        print("Running in headless mode – no GUI will be shown.")
 
 
 if __name__ == "__main__":
