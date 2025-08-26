@@ -1,4 +1,76 @@
-"""
+uninstall_btn = tk.Button(
+            utility_frame,
+            text="🗑️ Stop & Uninstall Everything",
+            command=self.uninstall_label_studio,
+            width=38, height=1,
+            bg="#7F8C8D", fg="white"
+        )
+        uninstall_btn.pack(pady=2)
+
+    def _debug_connections(self):
+        """Debug method to check what's happening with connections."""
+        print("\n" + "="*50)
+        print("[ALF DEBUG] Connection Diagnostic")
+        print("="*50)
+        
+        # Check Label Studio process
+        if self.label_studio_process:
+            poll_result = self.label_studio_process.poll()
+            print(f"Label Studio process status: {'Running' if poll_result is None else f'Exited with code {poll_result}'}")
+            if poll_result is not None:
+                try:
+                    stdout, stderr = self.label_studio_process.communicate(timeout=1)
+                    print(f"Label Studio stdout: {stdout.decode()[:200]}...")
+                    print(f"Label Studio stderr: {stderr.decode()[:200]}...")
+                except:
+                    pass
+        else:
+            print("Label Studio process: Not started")
+        
+        # Check ML Backend process
+        if self.server_process:
+            poll_result = self.server_process.poll()
+            print(f"ML Backend process status: {'Running' if poll_result is None else f'Exited with code {poll_result}'}")
+            if poll_result is not None:
+                try:
+                    stdout, stderr = self.server_process.communicate(timeout=1)
+                    print(f"ML Backend stdout: {stdout.decode()[:200]}...")
+                    print(f"ML Backend stderr: {stderr.decode()[:200]}...")
+                except:
+                    pass
+        else:
+            print("ML Backend process: Not started")
+        
+        # Check port accessibility
+        import socket
+        
+        def check_port(port, name):
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(2)
+                result = sock.connect_ex(('localhost', port))
+                sock.close()
+                if result == 0:
+                    print(f"Port {port} ({name}): OPEN")
+                else:
+                    print(f"Port {port} ({name}): CLOSED")
+            except:
+                print(f"Port {port} ({name}): ERROR checking")
+        
+        check_port(8080, "Label Studio")
+        check_port(9090, "ML Backend")
+        
+        # Check HTTP responses
+        for port, name in [(8080, "Label Studio"), (9090, "ML Backend")]:
+            try:
+                response = requests.get(f"http://localhost:{port}", timeout=5)
+                print(f"{name} HTTP response: {response.status_code}")
+            except Exception as e:
+                print(f"{name} HTTP response: ERROR - {e}")
+        
+        print("="*50)
+        
+        self.update_status("🔧 Debug info printed to console")"""
 ALF Label Studio Controller GUI
 
 This module provides a graphical interface to manage Label Studio and the ALF ML backend.
@@ -119,31 +191,50 @@ class LabelStudioController:
         2. Updates status when backend is ready
         3. Attempts registration if Label Studio is running
         """
-        max_attempts = 30
+        max_attempts = 60  # Increased timeout for slower systems
         self.update_status("⏳ Waiting for ML backend to start...")
         
         for attempt in range(max_attempts):
             try:
-                # Check if backend is responding
-                response = requests.get("http://localhost:9090/", timeout=3)
-                if response.status_code == 200:
+                # Try multiple endpoints to check if backend is ready
+                endpoints_to_try = [
+                    "http://localhost:9090/",
+                    "http://localhost:9090/docs",
+                    "http://127.0.0.1:9090/"
+                ]
+                
+                backend_ready = False
+                for endpoint in endpoints_to_try:
+                    try:
+                        response = requests.get(endpoint, timeout=5)
+                        if response.status_code in [200, 404]:  # 404 is OK for some endpoints
+                            backend_ready = True
+                            break
+                    except:
+                        continue
+                
+                if backend_ready:
                     self.update_status("✅ ALF ML Backend is running on port 9090")
                     
                     # If Label Studio is running, attempt registration
                     if self._is_label_studio_running():
-                        time.sleep(2)  # Give backend a moment to fully initialize
+                        time.sleep(3)  # Give backend more time to fully initialize
                         self._register_backend()
                     else:
                         self.update_status("✅ Backend ready. Start Label Studio to auto-register.")
                     return
                     
-            except requests.exceptions.RequestException:
-                # Backend not ready yet, wait and retry
-                if attempt < max_attempts - 1:
-                    time.sleep(2)
+            except Exception as e:
+                if attempt % 10 == 0:  # Log every 10th attempt
+                    print(f"[ALF] Backend check attempt {attempt}: {e}")
+                
+            # Backend not ready yet, wait and retry
+            if attempt < max_attempts - 1:
+                time.sleep(3)  # Increased wait time
                     
         # Backend failed to start
         self.update_status("❌ Backend failed to start. Check console for errors.")
+        print(f"[ALF] Backend process status: {self.server_process.poll() if self.server_process else 'Not started'}")
     
     def _register_backend(self):
         """
@@ -289,19 +380,54 @@ class LabelStudioController:
         try:
             # Clean up any existing processes on port 8080
             self._kill_processes_on_port(8080)
-            time.sleep(2)
+            time.sleep(3)
             
-            # Start Label Studio server
-            self.label_studio_process = subprocess.Popen([
-                "label-studio", "start",
-                "--port", "8080",
-                "--host", "localhost"
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # Try different Label Studio startup methods
+            startup_commands = [
+                # Method 1: Standard startup
+                ["label-studio", "start", "--port", "8080", "--host", "0.0.0.0"],
+                # Method 2: Alternative startup
+                ["python", "-m", "label_studio.core.server", "--port", "8080"],
+                # Method 3: Direct module call
+                [sys.executable, "-m", "label_studio", "start", "--port", "8080"]
+            ]
+            
+            for i, cmd in enumerate(startup_commands):
+                try:
+                    print(f"[ALF] Trying startup method {i+1}: {' '.join(cmd)}")
+                    self.label_studio_process = subprocess.Popen(
+                        cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        env=os.environ.copy()
+                    )
+                    
+                    # Give it a moment to start
+                    time.sleep(5)
+                    
+                    # Check if process is still running (didn't crash immediately)
+                    if self.label_studio_process.poll() is None:
+                        print(f"[ALF] Label Studio process started with PID: {self.label_studio_process.pid}")
+                        break
+                    else:
+                        print(f"[ALF] Startup method {i+1} failed")
+                        if i < len(startup_commands) - 1:
+                            continue
+                        else:
+                            raise Exception("All startup methods failed")
+                            
+                except FileNotFoundError:
+                    print(f"[ALF] Command not found for method {i+1}")
+                    if i < len(startup_commands) - 1:
+                        continue
+                    else:
+                        raise Exception("Label Studio command not found")
             
             # Wait for Label Studio to be ready
             threading.Thread(target=self._wait_for_label_studio, daemon=True).start()
             
         except Exception as e:
+            print(f"[ALF] Failed to start Label Studio: {e}")
             self.root.after(0, self._hide_progress)
             self.root.after(0, lambda: self.update_status(f"❌ Failed to start Label Studio: {e}"))
     
@@ -314,11 +440,34 @@ class LabelStudioController:
         2. Opens Label Studio in browser
         3. Registers the backend if it's already running
         """
-        max_attempts = 60
+        max_attempts = 120  # Increased timeout for slower systems
         self.root.after(0, lambda: self.update_status("⏳ Starting Label Studio..."))
         
         for attempt in range(max_attempts):
+            # Try multiple ways to check if Label Studio is ready
+            ls_ready = False
+            
+            # Method 1: Check main endpoint
             if self._is_label_studio_running():
+                ls_ready = True
+            
+            # Method 2: Check if process is still running (not crashed)
+            if not ls_ready and self.label_studio_process:
+                if self.label_studio_process.poll() is None:  # Process still running
+                    # Try a longer timeout for slower systems
+                    try:
+                        response = requests.get("http://localhost:8080", timeout=10)
+                        if response.status_code == 200:
+                            ls_ready = True
+                    except:
+                        pass
+                else:
+                    # Process has terminated
+                    self.root.after(0, self._hide_progress)
+                    self.root.after(0, lambda: self.update_status("❌ Label Studio process crashed"))
+                    return
+            
+            if ls_ready:
                 self.root.after(0, self._hide_progress)
                 self.root.after(0, lambda: self.update_status(
                     "✅ Label Studio started! Visit: http://localhost:8080"
@@ -331,12 +480,22 @@ class LabelStudioController:
                 if self.server_process is not None:
                     threading.Thread(target=self._register_backend, daemon=True).start()
                 return
-                
-            time.sleep(2)
             
-        # Timeout
+            # Log progress every 20 attempts
+            if attempt % 20 == 0 and attempt > 0:
+                print(f"[ALF] Still waiting for Label Studio... attempt {attempt}/{max_attempts}")
+                self.root.after(0, lambda: self.update_status(f"⏳ Label Studio starting... ({attempt}/{max_attempts})"))
+                
+            time.sleep(3)  # Increased wait time
+            
+        # Timeout - check what went wrong
         self.root.after(0, self._hide_progress)
-        self.root.after(0, lambda: self.update_status("⚠️ Label Studio took too long to start"))
+        
+        # Provide more specific error information
+        if self.label_studio_process and self.label_studio_process.poll() is None:
+            self.root.after(0, lambda: self.update_status("⚠️ Label Studio is running but not responding. Try manually: http://localhost:8080"))
+        else:
+            self.root.after(0, lambda: self.update_status("❌ Label Studio failed to start. Check if port 8080 is available."))
     
     def _is_label_studio_running(self):
         """
@@ -346,8 +505,23 @@ class LabelStudioController:
             bool: True if Label Studio responds on port 8080, False otherwise
         """
         try:
-            response = requests.get("http://localhost:8080", timeout=3)
-            return response.status_code == 200
+            # Try multiple endpoints and timeouts
+            endpoints = [
+                "http://localhost:8080",
+                "http://127.0.0.1:8080",
+                "http://localhost:8080/api/health",
+                "http://localhost:8080/version"
+            ]
+            
+            for endpoint in endpoints:
+                try:
+                    response = requests.get(endpoint, timeout=8)
+                    if response.status_code in [200, 404, 302]:  # 404/302 might be OK for some endpoints
+                        return True
+                except:
+                    continue
+                    
+            return False
         except:
             return False
     
@@ -694,14 +868,15 @@ class LabelStudioController:
         )
         stop_btn.pack(pady=8)
         
-        uninstall_btn = tk.Button(
+        # Add a debug button to help troubleshoot
+        debug_btn = tk.Button(
             utility_frame,
-            text="🗑️ Stop & Uninstall Everything",
-            command=self.uninstall_label_studio,
+            text="🔧 Debug Connection Issues",
+            command=self._debug_connections,
             width=38, height=1,
-            bg="#7F8C8D", fg="white"
+            bg="#34495E", fg="white"
         )
-        uninstall_btn.pack(pady=2)
+        debug_btn.pack(pady=2)
 
 
 # =============================================================================
