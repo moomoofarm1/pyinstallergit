@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+label-studio
+label-studio-ml
+transformers
+torch
+requests
+pathlib
