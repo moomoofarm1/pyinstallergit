@@ -19,18 +19,18 @@ def start_server():
     if server_process is None:
         env = os.environ.copy()
         env["HF_TOKEN"] = os.getenv("HF_TOKEN", "")  # Read from environment or empty
-        # Start server in a background process using FastAPI's CLI
+        # Start server in a background process using uvicorn directly
         server_process = subprocess.Popen(
             [
                 sys.executable,
                 "-m",
-                "fastapi",
-                "run",
+                "uvicorn",
                 "server:app",
                 "--host",
                 "0.0.0.0",
                 "--port",
                 "9090",
+                "--reload"
             ],
             env=env
         )
