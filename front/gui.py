@@ -62,12 +62,15 @@ def install_label_studio():
             ["pip", "install", "label-studio"], capture_output=True, text=True
         )
 
-        # Start Label Studio after install
-        try:
-            subprocess.Popen(["label-studio", "start"])
-            msg = 'label-studio successfully installed and started! Use browser and enter: http://localhost:8080/user/login/'
-        except Exception as e:
-            msg = f"Installed, but failed to start: {e}"
+        if result.returncode != 0:
+            msg = f"Installation failed: {result.stderr}"
+        else:
+            # Start Label Studio after install
+            try:
+                subprocess.Popen(["label-studio", "start"])
+                msg = 'label-studio successfully installed and started! Use browser and enter: http://localhost:8080/user/login/'
+            except Exception as e:
+                msg = f"Installed, but failed to start: {e}"
 
         root.after(0, stop_progress_bar)
         root.after(0, lambda: update_status(msg))
