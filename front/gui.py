@@ -19,9 +19,19 @@ def start_server():
     if server_process is None:
         env = os.environ.copy()
         env["HF_TOKEN"] = None  # your_huggingface_token_here, or read from config
-        # Start server in a background process
+        # Start server in a background process using FastAPI's CLI
         server_process = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "9090"]
+            [
+                sys.executable,
+                "-m",
+                "fastapi",
+                "run",
+                "server:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "9090",
+            ]
         )
         # Give it a short delay to start up, then open in browser
         threading.Thread(target=open_browser_delayed, daemon=True).start()
