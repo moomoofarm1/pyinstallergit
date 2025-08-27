@@ -18,7 +18,7 @@ def start_server():
     global server_process
     if server_process is None:
         env = os.environ.copy()
-        env["HF_TOKEN"] = None  # your_huggingface_token_here, or read from config
+        env["HF_TOKEN"] = os.getenv("HF_TOKEN", "")  # Read from environment or empty
         # Start server in a background process using FastAPI's CLI
         server_process = subprocess.Popen(
             [
@@ -31,7 +31,8 @@ def start_server():
                 "0.0.0.0",
                 "--port",
                 "9090",
-            ]
+            ],
+            env=env
         )
         # Give it a short delay to start up, then open in browser
         threading.Thread(target=open_browser_delayed, daemon=True).start()
@@ -58,7 +59,7 @@ def install_label_studio():
     def task():
         # Install label-studio
         result = subprocess.run(
-            ["uv", "pip", "install", "label-studio"], capture_output=True, text=True
+            ["pip", "install", "label-studio"], capture_output=True, text=True
         )
 
         # Start Label Studio after install
@@ -79,37 +80,28 @@ def uninstall_label_studio():
 
     def task():
         try:
-            # Find what's using port 8080
-            result = subprocess.run(['netstat', '-ano'], capture_output=True, text=True)
-    
-            for line in result.stdout.split('\n'):
-                if ':8080' in line and 'LISTENING' in line:
-                # Extract PID (last column)
-                    parts = line.split()
-                    if parts:
-                        pid = parts[-1]
-                        print(f"Process {pid} is using port 8080")
-                        # Kill by PID
-                        subprocess.run(['taskkill', '/F', '/PID', pid]) # only for windows
-                        print(f"Killed process {pid}")
-
-        except Exception:
-            sys.exit()  # Ignore if not running or stop command fails, pkill -9 -f label-studio
+            # Cross-platform process termination
+            if os.name == 'nt':  # Windows
+                # Find what's using port 8080
+                result = subprocess.run(['netstat', '-ano'], capture_output=True, text=True)
+                for line in result.stdout.split('\n'):
+                    if ':8080' in line and 'LISTENING' in line:
+                        parts = line.split()
+                        if parts:
+                            pid = parts[-1]
+                            print(f"Process {pid} is using port 8080")
+                            subprocess.run(['taskkill', '/F', '/PID', pid], capture_output=True)
+                            print(f"Killed process {pid}")
+            else:  # Linux/Mac
+                subprocess.run(['pkill', '-9', '-f', 'label-studio'], capture_output=True)
+        except Exception as e:
+            print(f"Error stopping processes: {e}")
 
         # Uninstall package
         try:
-            subprocess.call(["uv", "pip", "uninstall", "label-studio"])
-        except:
-            exit()
-
-        # Remove stored credentials/configs
-        # if os.name == "nt":  # Windows
-        #     ls_dir = Path(os.getenv("APPDATA", "")) / "label-studio"
-        # else:  # Linux/Mac
-        #     ls_dir = Path.home() / ".local" / "share" / "label-studio"
-
-        #if ls_dir.exists():
-        #    shutil.rmtree(ls_dir, ignore_errors=True)
+            subprocess.call(["pip", "uninstall", "label-studio", "-y"])
+        except Exception as e:
+            print(f"Error uninstalling: {e}")
 
         root.after(0, stop_progress_bar)
         root.after(0, lambda: update_status("label-studio successfully stopped and removed!"))
@@ -145,11 +137,7 @@ def run_gui():
     progress_bar = ttk.Progressbar(root, mode="indeterminate", length=250)
 
     # Status label at bottom
-    status_label = tk.Label(root, text="", fg="green")
+    status_label = tk.Label(root, text="Ready to start. First install Label Studio, then start ALF.", fg="blue")
     status_label.pack(pady=10)
 
     root.mainloop()
-
-    
-#if __name__ == "__main__":
-#    run_gui()
