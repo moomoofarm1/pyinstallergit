@@ -53,8 +53,16 @@ def install_label_studio():
 
         # Start Label Studio after install
         try:
-            subprocess.Popen(["label-studio", "start"])
-            msg = 'label-studio successfully installed and started! Use browser and enter: http://localhost:8080/user/login/'
+            subprocess.Popen([
+                "label-studio",
+                "start",
+                "--ml-backend",
+                "http://localhost:9090",
+            ])
+            msg = (
+                "label-studio successfully installed and started with ML backend! "
+                "Use browser and enter: http://localhost:8080/user/login/"
+            )
         except Exception as e:
             msg = f"Installed, but failed to start: {e}"
 
