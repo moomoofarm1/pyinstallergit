@@ -1,5 +1,5 @@
-fastapi
-uvicorn
+fastapi[standard]
+uvicorn[standard]
 label-studio
 label-studio-ml
 transformers
