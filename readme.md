@@ -209,10 +209,53 @@ The system gracefully handles missing dependencies with mock implementations, al
 - **Resource Requirements**: ~2GB RAM for basic operation, ~4GB for ML processing
 - **Dependencies**: Automatically managed through virtual environments
 
+## Deployment
+
+### Standalone Executable (Windows 10+)
+
+ALF can be packaged as a standalone .exe file that includes the GUI, audio processing libraries, and uv package manager. Users can run the executable without installing Python.
+
+#### Build Process
+
+**Windows:**
+```batch
+# Automated build
+build.bat
+
+# Manual build
+pip install pyinstaller>=6.3 uv librosa soundfile pydub scipy numpy
+pyinstaller alf_gui.spec --clean --noconfirm
+```
+
+**Linux/macOS:**
+```bash
+# Automated build  
+./build.sh
+
+# Manual build
+pip install pyinstaller>=6.3 uv librosa soundfile pydub scipy numpy
+pyinstaller alf_gui.spec --clean --noconfirm
+```
+
+#### Output
+- **File**: `dist/ALF-AudioProcessing.exe` (~100-200MB)
+- **Includes**: GUI, Python interpreter, audio libraries, uv package manager
+- **Excludes**: ML frameworks (installed dynamically via GUI)
+
+#### Deployment Strategy
+1. **GUI + uv bundled**: Core application with package manager
+2. **Dynamic ML installation**: Users click GUI buttons to install:
+   - pyannote.audio (diarization) in isolated virtual environment
+   - NeMo ASR (transcription) in separate virtual environment
+3. **Clean separation**: No dependency conflicts between ML frameworks
+
+For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## Development Status
 
 - ✅ **Audio Preprocessing**: Complete with comprehensive testing
 - ✅ **Diarization Pipeline**: Complete with pyannote.audio integration
 - ✅ **GUI and Communication**: Full-featured tkinter interface
 - ✅ **Testing Framework**: Comprehensive unit and integration tests
+- ✅ **PyInstaller Packaging**: Standalone executable with dynamic ML installation
 - 🔄 **Transcription Pipeline**: Framework ready, awaiting NeMo ASR implementation

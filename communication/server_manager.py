@@ -130,76 +130,169 @@ class ServerManager:
             logger.error(f"Virtual environment setup failed: {e}")
             raise RuntimeError(f"Cannot setup virtual environments: {e}")
     
+    def _get_uv_executable(self):
+        """Get the path to uv executable, checking bundled location first."""
+        # Check if running from PyInstaller bundle
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            # Running from PyInstaller bundle
+            bundled_uv = os.path.join(sys._MEIPASS, 'uv', 'uv.exe' if os.name == 'nt' else 'uv')
+            if os.path.exists(bundled_uv):
+                logger.info(f"Using bundled uv: {bundled_uv}")
+                return bundled_uv
+        
+        # Check system PATH
+        uv_cmd = "uv.exe" if os.name == 'nt' else "uv"
+        try:
+            result = subprocess.run(
+                ['where', uv_cmd] if os.name == 'nt' else ['which', uv_cmd],
+                capture_output=True, text=True, shell=(os.name == 'nt')
+            )
+            if result.returncode == 0:
+                uv_path = result.stdout.strip().split('\n')[0]
+                logger.info(f"Using system uv: {uv_path}")
+                return uv_path
+        except Exception as e:
+            logger.error(f"Error finding uv: {e}")
+        
+        raise RuntimeError("uv package manager not found. Please install uv or ensure it's bundled with the application.")
+    
     def _setup_diarization_environment(self):
         """Set up the diarization virtual environment."""
         logger.info("Setting up diarization environment...")
         
-        # Create environment using uv
-        cmd = ["uv", "venv", str(self.diarization_venv), "--python", "3.9"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            # Get uv executable
+            uv_exe = self._get_uv_executable()
+            
+            # Create environment using uv
+            cmd = [uv_exe, "venv", str(self.diarization_venv), "--python", "3.9"]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                raise RuntimeError(f"Failed to create diarization venv: {result.stderr}")
+            
+            # Install diarization dependencies using uv (faster than pip)
+            python_path = self.diarization_venv / ("Scripts/python" if os.name == 'nt' else "bin/python")
+            
+            # Use uv to install dependencies in the venv
+            deps_file = Path("configs/diarization_env.txt")
+            if deps_file.exists():
+                cmd = [uv_exe, "pip", "install", "-p", str(python_path), "-r", str(deps_file)]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                if result.returncode != 0:
+                    logger.warning(f"uv installation failed, falling back to pip: {result.stderr}")
+                    # Fallback to pip installation
+                    self._install_deps_with_pip(self.diarization_venv, [
+                        "fastapi[standard]>=0.100.0",
+                        "uvicorn>=0.23.0", 
+                        "pyannote.audio>=3.0.0",
+                        "pyannote.core>=5.0.0",
+                        "torch>=2.0.0",
+                        "torchaudio>=2.0.0",
+                        "librosa>=0.10.0",
+                        "soundfile>=0.12.0",
+                        "requests>=2.31.0",
+                        "pydantic>=2.0.0"
+                    ])
+                else:
+                    logger.info("Dependencies installed successfully with uv")
+            else:
+                logger.warning("Dependencies file not found, installing individual packages")
+                self._install_deps_with_pip(self.diarization_venv, [
+                    "fastapi[standard]>=0.100.0",
+                    "uvicorn>=0.23.0",
+                    "pyannote.audio>=3.0.0", 
+                    "pyannote.core>=5.0.0",
+                    "torch>=2.0.0",
+                    "torchaudio>=2.0.0",
+                    "librosa>=0.10.0",
+                    "soundfile>=0.12.0",
+                    "requests>=2.31.0",
+                    "pydantic>=2.0.0"
+                ])
+            
+            logger.info("Diarization environment setup completed")
+            
+        except Exception as e:
+            logger.error(f"Diarization environment setup failed: {e}")
+            raise
+    
+    def _install_deps_with_pip(self, venv_path: Path, dependencies: list):
+        """Install dependencies using pip as fallback."""
+        pip_path = venv_path / ("Scripts/pip" if os.name == 'nt' else "bin/pip")
         
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to create diarization venv: {result.stderr}")
-        
-        # Install diarization dependencies
-        pip_path = self.diarization_venv / ("Scripts/pip" if os.name == 'nt' else "bin/pip")
-        
-        diarization_deps = [
-            "fastapi[standard]>=0.100.0",
-            "uvicorn>=0.23.0",
-            "pyannote.audio>=3.0.0",
-            "pyannote.core>=5.0.0",
-            "torch>=2.0.0",
-            "torchaudio>=2.0.0",
-            "librosa>=0.10.0",
-            "soundfile>=0.12.0",
-            "requests>=2.31.0",
-            "pydantic>=2.0.0"
-        ]
-        
-        for dep in diarization_deps:
+        for dep in dependencies:
             cmd = [str(pip_path), "install", dep]
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode != 0:
                 logger.warning(f"Failed to install {dep}: {result.stderr}")
-        
-        logger.info("Diarization environment setup completed")
+            else:
+                logger.debug(f"Successfully installed: {dep}")
     
     def _setup_transcription_environment(self):
         """Set up the transcription virtual environment."""
         logger.info("Setting up transcription environment...")
         
-        # Create environment using uv
-        cmd = ["uv", "venv", str(self.transcription_venv), "--python", "3.9"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to create transcription venv: {result.stderr}")
-        
-        # Install transcription dependencies
-        pip_path = self.transcription_venv / ("Scripts/pip" if os.name == 'nt' else "bin/pip")
-        
-        transcription_deps = [
-            "label-studio-ml>=1.0.9",
-            "nemo-toolkit[asr]>=1.20.0",
-            "torch>=2.0.0",
-            "torchaudio>=2.0.0",
-            "omegaconf>=2.3.0",
-            "hydra-core>=1.3.0",
-            "librosa>=0.10.0",
-            "soundfile>=0.12.0",
-            "requests>=2.31.0",
-            "fastapi[standard]>=0.100.0",
-            "uvicorn>=0.23.0"
-        ]
-        
-        for dep in transcription_deps:
-            cmd = [str(pip_path), "install", dep]
+        try:
+            # Get uv executable
+            uv_exe = self._get_uv_executable()
+            
+            # Create environment using uv
+            cmd = [uv_exe, "venv", str(self.transcription_venv), "--python", "3.9"]
             result = subprocess.run(cmd, capture_output=True, text=True)
+            
             if result.returncode != 0:
-                logger.warning(f"Failed to install {dep}: {result.stderr}")
-        
-        logger.info("Transcription environment setup completed")
+                raise RuntimeError(f"Failed to create transcription venv: {result.stderr}")
+            
+            # Install transcription dependencies using uv (faster than pip)
+            python_path = self.transcription_venv / ("Scripts/python" if os.name == 'nt' else "bin/python")
+            
+            # Use uv to install dependencies in the venv
+            deps_file = Path("configs/transcription_env.txt")
+            if deps_file.exists():
+                cmd = [uv_exe, "pip", "install", "-p", str(python_path), "-r", str(deps_file)]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                if result.returncode != 0:
+                    logger.warning(f"uv installation failed, falling back to pip: {result.stderr}")
+                    # Fallback to pip installation
+                    self._install_deps_with_pip(self.transcription_venv, [
+                        "label-studio-ml>=1.0.9",
+                        "nemo-toolkit[asr]>=1.20.0",
+                        "torch>=2.0.0",
+                        "torchaudio>=2.0.0",
+                        "omegaconf>=2.3.0",
+                        "hydra-core>=1.3.0",
+                        "librosa>=0.10.0",
+                        "soundfile>=0.12.0",
+                        "requests>=2.31.0",
+                        "fastapi[standard]>=0.100.0",
+                        "uvicorn>=0.23.0"
+                    ])
+                else:
+                    logger.info("Dependencies installed successfully with uv")
+            else:
+                logger.warning("Dependencies file not found, installing individual packages")
+                self._install_deps_with_pip(self.transcription_venv, [
+                    "label-studio-ml>=1.0.9",
+                    "nemo-toolkit[asr]>=1.20.0",
+                    "torch>=2.0.0", 
+                    "torchaudio>=2.0.0",
+                    "omegaconf>=2.3.0",
+                    "hydra-core>=1.3.0",
+                    "librosa>=0.10.0",
+                    "soundfile>=0.12.0",
+                    "requests>=2.31.0",
+                    "fastapi[standard]>=0.100.0",
+                    "uvicorn>=0.23.0"
+                ])
+            
+            logger.info("Transcription environment setup completed")
+            
+        except Exception as e:
+            logger.error(f"Transcription environment setup failed: {e}")
+            raise
     
     def check_environment_status(self) -> str:
         """
