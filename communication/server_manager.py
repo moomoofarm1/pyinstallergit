@@ -548,6 +548,82 @@ class ServerManager:
         self.monitors.clear()
         logger.info("Server cleanup completed")
     
+    def cleanup_all_and_exit(self):
+        """
+        Clean up all servers, remove virtual environments, and prepare for application exit.
+        
+        This method performs a complete cleanup including:
+        - Stopping all running servers
+        - Removing virtual environments
+        - Cleaning up temporary files
+        """
+        logger.info("Performing complete cleanup and exit preparation...")
+        
+        try:
+            # First, cleanup all running servers
+            self.cleanup_all()
+            
+            # Remove virtual environments
+            self.remove_virtual_environments()
+            
+            logger.info("Complete cleanup finished - application ready to exit")
+            
+        except Exception as e:
+            logger.error(f"Error during cleanup and exit: {e}")
+            # Continue with cleanup even if there are errors
+    
+    def remove_virtual_environments(self):
+        """
+        Remove all virtual environments created by ALF.
+        
+        This method safely removes the .venvs directory and all
+        virtual environments within it.
+        """
+        try:
+            import shutil
+            
+            if self.venv_dir.exists():
+                logger.info(f"Removing virtual environments directory: {self.venv_dir}")
+                
+                # Remove the entire .venvs directory
+                shutil.rmtree(str(self.venv_dir))
+                
+                logger.info("Virtual environments removed successfully")
+            else:
+                logger.info("No virtual environments directory found to remove")
+                
+        except Exception as e:
+            logger.error(f"Failed to remove virtual environments: {e}")
+            # Try to remove individual environments if full removal fails
+            self._remove_individual_environments()
+    
+    def _remove_individual_environments(self):
+        """Remove individual virtual environments if bulk removal fails."""
+        try:
+            import shutil
+            
+            environments = [self.diarization_venv, self.transcription_venv]
+            
+            for env_path in environments:
+                if env_path.exists():
+                    try:
+                        logger.info(f"Removing individual environment: {env_path}")
+                        shutil.rmtree(str(env_path))
+                        logger.info(f"Successfully removed: {env_path.name}")
+                    except Exception as e:
+                        logger.error(f"Failed to remove {env_path.name}: {e}")
+            
+            # Try to remove the parent .venvs directory if it's empty
+            try:
+                if self.venv_dir.exists() and not any(self.venv_dir.iterdir()):
+                    self.venv_dir.rmdir()
+                    logger.info("Removed empty .venvs directory")
+            except Exception as e:
+                logger.warning(f"Could not remove .venvs directory: {e}")
+                
+        except Exception as e:
+            logger.error(f"Failed to remove individual environments: {e}")
+    
     def restart_server(self, server_type: ServerType) -> bool:
         """
         Restart a server.

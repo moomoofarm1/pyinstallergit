@@ -215,11 +215,16 @@ class AudioProcessingApp:
                                  command=self.check_environments)
         check_env_btn.grid(row=2, column=1, sticky=tk.W)
         
-        # Cleanup
+        # Cleanup buttons
         cleanup_btn = ttk.Button(parent, text="Cleanup All Servers", 
-                               command=self.cleanup_all_servers, 
-                               style="Accent.TButton")
-        cleanup_btn.grid(row=3, column=0, pady=(20, 0), sticky=tk.W)
+                               command=self.cleanup_all_servers)
+        cleanup_btn.grid(row=3, column=0, pady=(20, 0), sticky=tk.W, padx=(0, 10))
+        
+        # Exit button with full cleanup
+        exit_btn = ttk.Button(parent, text="Exit ALF (Remove Environments)", 
+                            command=self.exit_application_with_cleanup,
+                            style="Accent.TButton")
+        exit_btn.grid(row=3, column=1, pady=(20, 0), sticky=tk.W)
     
     def setup_log_section(self, parent: ttk.Frame, row: int):
         """Set up the log display section."""
@@ -480,8 +485,62 @@ class AudioProcessingApp:
         """Update status message."""
         self.status_var.set(message)
     
+    def exit_application_with_cleanup(self):
+        """Exit application with complete cleanup including virtual environments."""
+        result = messagebox.askyesnocancel(
+            "Exit ALF", 
+            "Do you want to exit and remove all virtual environments?\n\n"
+            "This will:\n"
+            "• Stop all running servers\n"
+            "• Delete all virtual environments (.venvs directory)\n"
+            "• Clean up temporary files\n"
+            "• Close the application\n\n"
+            "Click 'Yes' to exit with full cleanup\n"
+            "Click 'No' to exit without removing environments\n"
+            "Click 'Cancel' to stay in the application"
+        )
+        
+        if result is True:  # Yes - exit with full cleanup
+            self._perform_full_cleanup_and_exit()
+        elif result is False:  # No - exit without removing environments
+            self.on_closing()
+    
+    def _perform_full_cleanup_and_exit(self):
+        """Perform full cleanup in a background thread and exit."""
+        def cleanup_task():
+            try:
+                self.show_progress("Performing complete cleanup...")
+                self.root.after(0, lambda: self.update_status("Stopping all servers..."))
+                
+                # Perform complete cleanup including virtual environments
+                self.server_manager.cleanup_all_and_exit()
+                
+                # Also cleanup processed audio files
+                try:
+                    self.audio_preprocessor.cleanup_processed_files()
+                except:
+                    pass  # Don't fail if audio cleanup has issues
+                
+                self.root.after(0, lambda: self.update_status("Cleanup completed - exiting application"))
+                logger.info("Full cleanup completed - application exiting")
+                
+                # Close the application
+                self.root.after(1000, self.root.destroy)  # Small delay to show final message
+                
+            except Exception as e:
+                logger.error(f"Error during full cleanup: {e}")
+                self.root.after(0, lambda: messagebox.showerror(
+                    "Cleanup Error", 
+                    f"Some cleanup operations failed: {e}\n\nApplication will still exit."
+                ))
+                self.root.after(2000, self.root.destroy)  # Exit even if cleanup fails
+            finally:
+                self.root.after(0, self.hide_progress)
+        
+        threading.Thread(target=cleanup_task, daemon=True).start()
+    
     def on_closing(self):
-        """Handle application closing."""
+        """Handle application closing without virtual environment cleanup."""
         if messagebox.askokcancel("Quit", "Do you want to quit? This will stop all running servers."):
             self.cleanup_all_servers()
             self.root.destroy()
