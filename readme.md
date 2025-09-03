@@ -263,7 +263,31 @@ To complete and package this branch for distribution:
    git checkout production
    ```
 
-2. **Ensure Python 3.9+ is installed** and available in PATH
+2. **Install Python 3.9+ on Windows:**
+
+   **Method 1 - Official Python installer (Recommended):**
+   - Download from [python.org/downloads](https://python.org/downloads/)
+   - **IMPORTANT**: During installation, check ✅ "Add Python to PATH"
+   - Restart Command Prompt after installation
+   - Test: `python --version` or `py --version`
+
+   **Method 2 - Microsoft Store:**
+   - Open Microsoft Store
+   - Search for "Python 3.9" or newer version
+   - Install and restart Command Prompt
+   - Test: `python --version`
+
+   **Method 3 - Check existing installation:**
+   ```batch
+   # Try these commands to see if Python is already installed:
+   python --version
+   py --version  
+   python3 --version
+   ```
+
+   **If Python is installed but not in PATH:**
+   - Find Python installation (usually `C:\Users\%USERNAME%\AppData\Local\Programs\Python\`)
+   - Add to PATH manually or reinstall with "Add to PATH" option
 
 #### Step-by-Step Packaging Process
 

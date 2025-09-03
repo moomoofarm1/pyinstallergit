@@ -7,14 +7,50 @@ echo ALF - Advanced Audio Label Frontend
 echo Build Script for Windows
 echo ====================================
 
-REM Check if Python is available
+REM Check if Python is available (try multiple variants)
+set PYTHON_CMD=
 python --version >nul 2>&1
-if errorlevel 1 (
-    echo ERROR: Python is not installed or not in PATH
-    echo Please install Python 3.9+ and add it to PATH
-    pause
-    exit /b 1
+if not errorlevel 1 (
+    set PYTHON_CMD=python
+    goto python_found
 )
+
+py --version >nul 2>&1
+if not errorlevel 1 (
+    set PYTHON_CMD=py
+    goto python_found
+)
+
+python3 --version >nul 2>&1
+if not errorlevel 1 (
+    set PYTHON_CMD=python3
+    goto python_found
+)
+
+echo ERROR: Python is not installed or not accessible
+echo.
+echo Please install Python 3.9+ using one of these methods:
+echo.
+echo Method 1 - Official Python installer:
+echo   1. Download from https://python.org/downloads/
+echo   2. During installation, check "Add Python to PATH"
+echo   3. Restart Command Prompt after installation
+echo.
+echo Method 2 - Microsoft Store:
+echo   1. Open Microsoft Store
+echo   2. Search for "Python 3.9" or newer
+echo   3. Install and restart Command Prompt
+echo.
+echo Method 3 - Check if Python is installed but not in PATH:
+echo   Try running: py --version
+echo   If it works, Python is installed but PATH needs fixing
+echo.
+pause
+exit /b 1
+
+:python_found
+echo Found Python: %PYTHON_CMD%
+%PYTHON_CMD% --version
 
 REM Check if we're in the correct directory
 if not exist "main.py" (
@@ -25,15 +61,15 @@ if not exist "main.py" (
 
 echo.
 echo Step 1: Installing build dependencies...
-pip install pyinstaller>=6.3 pyinstaller-hooks-contrib>=2024.0
+%PYTHON_CMD% -m pip install pyinstaller>=6.3 pyinstaller-hooks-contrib>=2024.0
 
 echo.
 echo Step 2: Installing minimal runtime dependencies...
-pip install librosa soundfile pydub scipy numpy requests pydantic pathlib2
+%PYTHON_CMD% -m pip install librosa soundfile pydub scipy numpy requests pydantic pathlib2
 
 echo.
 echo Step 3: Installing uv package manager...
-pip install uv
+%PYTHON_CMD% -m pip install uv
 
 echo.
 echo Step 4: Cleaning previous build...
@@ -51,7 +87,7 @@ if not exist "assets\alf_icon.ico" (
 
 echo.
 echo Step 6: Building ALF executable...
-pyinstaller alf_gui.spec --clean --noconfirm
+%PYTHON_CMD% -m pyinstaller alf_gui.spec --clean --noconfirm
 
 echo.
 echo Step 7: Verifying build...
