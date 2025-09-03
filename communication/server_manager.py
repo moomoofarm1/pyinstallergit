@@ -465,7 +465,14 @@ class ServerManager:
             script = "server.py"
         
         python_path = venv / ("Scripts/python" if os.name == 'nt' else "bin/python")
-        
+
+        if not python_path.exists():
+            # Automatically set up the required environment using uv
+            if server_type == ServerType.DIARIZATION:
+                self._setup_diarization_environment()
+            else:
+                self._setup_transcription_environment()
+
         if not python_path.exists():
             raise FileNotFoundError(f"Python not found in virtual environment: {python_path}")
         

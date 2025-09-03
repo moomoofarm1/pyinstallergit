@@ -156,13 +156,27 @@ class AudioProcessingApp:
                  font=("Arial", 12, "bold")).grid(row=0, column=0, columnspan=2, pady=(0, 10))
         
         # Server controls
-        self.diarization_server_btn = ttk.Button(parent, text="Start Diarization Server", 
-                                               command=self.toggle_diarization_server)
-        self.diarization_server_btn.grid(row=1, column=0, sticky=tk.W, padx=(0, 10))
-        
-        self.diarization_browser_btn = ttk.Button(parent, text="Open Label Studio (Diarization)", 
-                                                command=self.open_diarization_browser)
-        self.diarization_browser_btn.grid(row=1, column=1, sticky=tk.W)
+        self.start_diarization_server_btn = ttk.Button(
+            parent,
+            text="Start Diarization Server",
+            command=self.start_diarization_server,
+        )
+        self.start_diarization_server_btn.grid(row=1, column=0, sticky=tk.W, padx=(0, 10))
+
+        self.stop_diarization_server_btn = ttk.Button(
+            parent,
+            text="Stop Diarization Server",
+            command=self.stop_diarization_server,
+            state="disabled",
+        )
+        self.stop_diarization_server_btn.grid(row=1, column=1, sticky=tk.W, padx=(0, 10))
+
+        self.diarization_browser_btn = ttk.Button(
+            parent,
+            text="Open Label Studio (Diarization)",
+            command=self.open_diarization_browser,
+        )
+        self.diarization_browser_btn.grid(row=1, column=2, sticky=tk.W)
         
         # Processing controls
         run_diarization_btn = ttk.Button(parent, text="Run Diarization Pipeline", 
@@ -181,13 +195,27 @@ class AudioProcessingApp:
                  font=("Arial", 12, "bold")).grid(row=0, column=0, columnspan=2, pady=(0, 10))
         
         # Server controls
-        self.transcription_server_btn = ttk.Button(parent, text="Start Transcription Server", 
-                                                 command=self.toggle_transcription_server)
-        self.transcription_server_btn.grid(row=1, column=0, sticky=tk.W, padx=(0, 10))
-        
-        self.transcription_browser_btn = ttk.Button(parent, text="Open Label Studio (Transcription)", 
-                                                  command=self.open_transcription_browser)
-        self.transcription_browser_btn.grid(row=1, column=1, sticky=tk.W)
+        self.start_transcription_server_btn = ttk.Button(
+            parent,
+            text="Start Transcription Server",
+            command=self.start_transcription_server,
+        )
+        self.start_transcription_server_btn.grid(row=1, column=0, sticky=tk.W, padx=(0, 10))
+
+        self.stop_transcription_server_btn = ttk.Button(
+            parent,
+            text="Stop Transcription Server",
+            command=self.stop_transcription_server,
+            state="disabled",
+        )
+        self.stop_transcription_server_btn.grid(row=1, column=1, sticky=tk.W, padx=(0, 10))
+
+        self.transcription_browser_btn = ttk.Button(
+            parent,
+            text="Open Label Studio (Transcription)",
+            command=self.open_transcription_browser,
+        )
+        self.transcription_browser_btn.grid(row=1, column=2, sticky=tk.W)
         
         # Processing controls
         run_transcription_btn = ttk.Button(parent, text="Run Transcription Pipeline", 
@@ -315,53 +343,45 @@ class AudioProcessingApp:
         
         threading.Thread(target=preprocess_task, daemon=True).start()
     
-    def toggle_diarization_server(self):
-        """Toggle diarization server on/off."""
-        if self.server_manager.is_diarization_running():
-            self.server_manager.stop_diarization_server()
-            self.diarization_server_btn.config(text="Start Diarization Server")
-            self.diarization_status_var.set("Server: Stopped | Browser: Not opened")
-        else:
-            def start_server():
-                try:
-                    self.server_manager.start_diarization_server()
-                    self.root.after(0, lambda: self.diarization_server_btn.config(
-                        text="Stop Diarization Server"
-                    ))
-                    self.root.after(0, lambda: self.diarization_status_var.set(
-                        "Server: Running | Browser: Not opened"
-                    ))
-                except Exception as e:
-                    logger.error(f"Failed to start diarization server: {e}")
-                    self.root.after(0, lambda: messagebox.showerror(
-                        "Error", f"Failed to start server: {e}"
-                    ))
-            
-            threading.Thread(target=start_server, daemon=True).start()
-    
-    def toggle_transcription_server(self):
-        """Toggle transcription server on/off."""
-        if self.server_manager.is_transcription_running():
-            self.server_manager.stop_transcription_server()
-            self.transcription_server_btn.config(text="Start Transcription Server")
-            self.transcription_status_var.set("Server: Stopped | Browser: Not opened")
-        else:
-            def start_server():
-                try:
-                    self.server_manager.start_transcription_server()
-                    self.root.after(0, lambda: self.transcription_server_btn.config(
-                        text="Stop Transcription Server"
-                    ))
-                    self.root.after(0, lambda: self.transcription_status_var.set(
-                        "Server: Running | Browser: Not opened"
-                    ))
-                except Exception as e:
-                    logger.error(f"Failed to start transcription server: {e}")
-                    self.root.after(0, lambda: messagebox.showerror(
-                        "Error", f"Failed to start server: {e}"
-                    ))
-            
-            threading.Thread(target=start_server, daemon=True).start()
+    def start_diarization_server(self):
+        """Start the diarization server."""
+        def start_server():
+            try:
+                self.server_manager.start_diarization_server()
+                self.root.after(0, lambda: self.start_diarization_server_btn.config(state="disabled"))
+                self.root.after(0, lambda: self.stop_diarization_server_btn.config(state="normal"))
+                self.root.after(0, lambda: self.diarization_status_var.set("Server: Running | Browser: Not opened"))
+            except Exception as e:
+                logger.error(f"Failed to start diarization server: {e}")
+                self.root.after(0, lambda: messagebox.showerror("Error", f"Failed to start server: {e}"))
+        threading.Thread(target=start_server, daemon=True).start()
+
+    def stop_diarization_server(self):
+        """Stop the diarization server."""
+        self.server_manager.stop_diarization_server()
+        self.start_diarization_server_btn.config(state="normal")
+        self.stop_diarization_server_btn.config(state="disabled")
+        self.diarization_status_var.set("Server: Stopped | Browser: Not opened")
+
+    def start_transcription_server(self):
+        """Start the transcription server."""
+        def start_server():
+            try:
+                self.server_manager.start_transcription_server()
+                self.root.after(0, lambda: self.start_transcription_server_btn.config(state="disabled"))
+                self.root.after(0, lambda: self.stop_transcription_server_btn.config(state="normal"))
+                self.root.after(0, lambda: self.transcription_status_var.set("Server: Running | Browser: Not opened"))
+            except Exception as e:
+                logger.error(f"Failed to start transcription server: {e}")
+                self.root.after(0, lambda: messagebox.showerror("Error", f"Failed to start server: {e}"))
+        threading.Thread(target=start_server, daemon=True).start()
+
+    def stop_transcription_server(self):
+        """Stop the transcription server."""
+        self.server_manager.stop_transcription_server()
+        self.start_transcription_server_btn.config(state="normal")
+        self.stop_transcription_server_btn.config(state="disabled")
+        self.transcription_status_var.set("Server: Stopped | Browser: Not opened")
     
     def open_diarization_browser(self):
         """Open Label Studio browser for diarization."""
@@ -460,8 +480,10 @@ class AudioProcessingApp:
         """Clean up all running servers."""
         try:
             self.server_manager.cleanup_all()
-            self.diarization_server_btn.config(text="Start Diarization Server")
-            self.transcription_server_btn.config(text="Start Transcription Server")
+            self.start_diarization_server_btn.config(state="normal")
+            self.stop_diarization_server_btn.config(state="disabled")
+            self.start_transcription_server_btn.config(state="normal")
+            self.stop_transcription_server_btn.config(state="disabled")
             self.diarization_status_var.set("Server: Stopped | Browser: Not opened")
             self.transcription_status_var.set("Server: Stopped | Browser: Not opened")
             self.update_status("All servers stopped")
