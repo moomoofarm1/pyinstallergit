@@ -61,8 +61,8 @@ project_root/
    ```
 
 ### 3. **Set up environments (via GUI):**
-   - The GUI will guide you through virtual environment setup
-   - Or manually: Click "Setup All Environments" in the Environment Management tab
+   - Starting a server automatically creates its virtual environment using `uv`
+   - You can also pre-create them via "Setup All Environments" in the Environment Management tab
 
 ### 4. **Set Hugging Face token (for pyannote.audio models):**
    ```bash
@@ -81,17 +81,19 @@ project_root/
 
 ### Diarization Workflow
 
-1. **Start Diarization Server**: Creates isolated virtual environment with pyannote.audio
+1. **Start Diarization Server**: Automatically creates an isolated environment with pyannote.audio using `uv`
 2. **Process Audio**: Upload preprocessed audio for speaker diarization
 3. **Review Results**: Opens Label Studio browser for manual verification of speaker segments
-4. **Export RTTM**: Generate Rich Transcription Time Marked files for further processing
+4. **Stop Diarization Server**: Use the dedicated stop button when finished
+5. **Export RTTM**: Generate Rich Transcription Time Marked files for further processing
 
 ### Transcription Workflow (Framework Ready)
 
-1. **Start Transcription Server**: Creates isolated environment with NeMo ASR
+1. **Start Transcription Server**: Automatically creates an isolated environment with NeMo ASR using `uv`
 2. **Process Audio**: Upload preprocessed audio for speech recognition
 3. **Review Results**: Opens Label Studio browser for transcription correction
-4. **Export Text**: Generate timestamped transcriptions
+4. **Stop Transcription Server**: Use the dedicated stop button when finished
+5. **Export Text**: Generate timestamped transcriptions
 
 ## Key Features
 
