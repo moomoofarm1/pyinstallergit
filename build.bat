@@ -187,10 +187,8 @@ if exist "dist\ALF-AudioProcessing.exe" (
     echo SUCCESS: ALF executable created successfully!
     echo.
     echo File size information:
-    if exist "dist\ALF-AudioProcessing.exe" (
-        for %%i in ("dist\ALF-AudioProcessing.exe") do echo File size: %%~zi bytes
-    ) else (
-        echo [Executable file not found]
+    for %%i in ("dist\ALF-AudioProcessing.exe") do (
+        echo File size: %%~zi bytes
     )
     echo.
     echo +-- Build Summary ------------------------------------------+

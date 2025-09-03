@@ -389,8 +389,17 @@ compatibility with different PyInstaller installation methods.
 
 **Error: "The syntax of the command is incorrect"**
 ```
-Solution: Fixed in latest version. Replaced problematic FOR loops with 
-simple file listing commands for better Command Prompt compatibility.
+Solution: Fixed in latest version. The error was caused by:
+1. Nested if exist statements in Step 10 verification
+2. Complex pipe operations not compatible with all Command Prompt versions
+
+Fixed by:
+- Removing redundant nested if exist checks
+- Using proper FOR loop syntax with parentheses
+- Simplified file size display logic
+
+If you see this error, update to the latest version which has robust
+Step 10 verification that works on all Windows Command Prompt versions.
 ```
 
 **Error: "uv not found" or "uv installation failed"**
@@ -452,6 +461,36 @@ All special characters have been replaced with ASCII equivalents.
 # Run comprehensive build tests first:
 cd build_tests
 run_all_tests.bat
+```
+
+**✅ Successful Build Output:**
+```batch
+Step 9: Building ALF standalone executable with PyInstaller...
+[...PyInstaller processing...]
+66722 INFO: Build complete! The results are available in: [path]\dist
+
+Step 10: Verifying build and testing executable...
+SUCCESS: ALF executable created successfully!
+
+File size information:
+File size: [number] bytes
+
++-- Build Summary ------------------------------------------+
+| Location: dist\ALF-AudioProcessing.exe                  |
+| The standalone executable includes:                     |
+| * Tkinter GUI application                              |
+| * Python 3.11 interpreter (via uv)                   |
+| * Audio processing libraries (librosa, soundfile)     |
+| * uv package manager for ML component installation    |
+| * All required runtime dependencies                    |
++-------------------------------------------------------+
+
+====================================
+    BUILD COMPLETED SUCCESSFULLY!    
+====================================
+
+Your ALF executable is ready for distribution!
+Location: dist\ALF-AudioProcessing.exe
 ```
 
 5. **Package for distribution:**
