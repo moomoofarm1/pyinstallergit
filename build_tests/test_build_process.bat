@@ -110,7 +110,7 @@ if errorlevel 1 (
 
 echo.
 echo Test 9: Testing PyInstaller analysis (dry run)...
-.test_build_venv\Scripts\python.exe -m pyinstaller alf_gui.spec --dry-run --log-level=WARN 2>nul
+.test_build_venv\Scripts\python.exe -m PyInstaller alf_gui.spec --dry-run --log-level=WARN 2>nul
 if errorlevel 1 (
     echo [FAIL] PyInstaller analysis failed - check alf_gui.spec
     set /a TEST_FAILED+=1

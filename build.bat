@@ -179,7 +179,7 @@ echo Step 9: Building ALF standalone executable with PyInstaller...
 echo This will create a single .exe file with all dependencies bundled.
 echo Note: uv package manager will be included for dynamic ML component installation.
 echo Using uv-managed Python environment for consistent builds...
-%PYTHON_CMD% -m pyinstaller alf_gui.spec --clean --noconfirm --log-level=INFO
+%PYTHON_CMD% -m PyInstaller alf_gui.spec --clean --noconfirm --log-level=INFO
 
 echo.
 echo Step 10: Verifying build and testing executable...
@@ -187,7 +187,8 @@ if exist "dist\ALF-AudioProcessing.exe" (
     echo SUCCESS: ALF executable created successfully!
     echo.
     echo File size information:
-    dir "dist\ALF-AudioProcessing.exe" | findstr "ALF-AudioProcessing.exe"
+    dir "dist\ALF-AudioProcessing.exe" 2>nul | findstr "ALF-AudioProcessing.exe" 2>nul
+    if errorlevel 1 echo [Could not display file size details]
     echo.
     echo +-- Build Summary ------------------------------------------+
     echo ^| Location: dist\ALF-AudioProcessing.exe                  ^|

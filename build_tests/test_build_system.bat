@@ -102,7 +102,7 @@ echo.
 echo Test 7: Testing PyInstaller availability after uv installation...
 uv venv .test_venv --python 3.11 >nul 2>&1
 uv pip install --python .test_venv\Scripts\python.exe pyinstaller >nul 2>&1
-.test_venv\Scripts\python.exe -m pyinstaller --version >nul 2>&1
+.test_venv\Scripts\python.exe -m PyInstaller --version >nul 2>&1
 if errorlevel 1 (
     echo [FAIL] PyInstaller not working after installation
     set /a TEST_FAILED+=1

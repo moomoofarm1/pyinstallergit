@@ -374,9 +374,13 @@ Solution: This error was fixed in the latest version. The build script now uses
 
 **Error: "No module named pyinstaller"**
 ```
-Solution: Fixed in latest version. The build script now uses:
-uv pip install --python .venv\Scripts\python.exe pyinstaller>=6.3
-This ensures PyInstaller is installed in the correct virtual environment.
+Solution: Fixed in latest version. This error was caused by:
+1. Package installation in wrong location - fixed with --python flag
+2. Case sensitivity - PyInstaller module uses capital P
+
+The build script now correctly uses:
+- Install: uv pip install --python .venv\Scripts\python.exe pyinstaller>=6.3
+- Run: python -m PyInstaller (capital P, not lowercase pyinstaller)
 
 Note: PyInstaller import verification tests both module import (import PyInstaller) 
 and command line functionality (python -m PyInstaller --version) to ensure 
