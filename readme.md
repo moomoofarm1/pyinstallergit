@@ -296,15 +296,26 @@ The build script now automatically handles all dependencies and packaging:
    ./build.sh
    ```
 
+**🧪 OPTIONAL: Run Build Tests First (Recommended for first-time users)**
+
+   ```batch
+   # Test build system before building (optional but recommended):
+   cd build_tests
+   run_all_tests.bat
+   cd ..
+   build.bat
+   ```
+
 **What the automated build does:**
 1. ✅ **Installs uv standalone** (no Python dependency - completely self-contained)
 2. ✅ **Uses uv to install Python 3.11** automatically in isolated environment
-3. ✅ **Installs all build dependencies** using uv for ultra-fast installation
-4. ✅ **Installs runtime dependencies** (librosa, soundfile, pydub, etc.) via uv
-5. ✅ **Creates standalone executable** with PyInstaller using uv-managed Python
-6. ✅ **Bundles uv package manager** for dynamic ML component installation
-7. ✅ **Verifies build success** with detailed reporting
-8. ✅ **Provides comprehensive troubleshooting** if any issues occur
+3. ✅ **Creates virtual environment** with `uv venv` (avoids package discovery conflicts)
+4. ✅ **Installs all build dependencies** using `uv pip install` for ultra-fast installation
+5. ✅ **Installs runtime dependencies** (librosa, soundfile, pydub, etc.) via uv
+6. ✅ **Creates standalone executable** with PyInstaller using uv-managed Python
+7. ✅ **Bundles uv package manager** for dynamic ML component installation
+8. ✅ **Verifies build success** with ASCII-compatible detailed reporting
+9. ✅ **Provides comprehensive troubleshooting** if any issues occur
 
 **🔧 Manual Build (Advanced Users Only)**
 
@@ -350,6 +361,48 @@ The automated script provides comprehensive verification:
 - ✓ End-user experience summary
 - ✓ Distribution readiness check
 - ✓ Troubleshooting guidance if needed
+
+**🔧 Build Troubleshooting:**
+
+If you encounter issues during the build process:
+
+**Common Error: "Multiple top-level packages discovered"**
+```
+Solution: This error was fixed in the latest version. The build script now uses 
+`uv venv` instead of `uv init` to avoid package discovery conflicts.
+```
+
+**Error: "uv not found" or "uv installation failed"**
+```batch
+# Manual uv installation:
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+# Then restart Command Prompt and try again
+```
+
+**Error: "Python 3.11 installation failed"**
+```batch
+# Check internet connection and try:
+uv python install 3.11
+```
+
+**Error: "Package installation failed"**
+```batch
+# Try running as Administrator or check firewall settings
+# Also verify sufficient disk space (>2GB recommended)
+```
+
+**Unicode character display issues**
+```
+The latest build script fixes Unicode character issues in Command Prompt.
+All special characters have been replaced with ASCII equivalents.
+```
+
+**Build system health check:**
+```batch
+# Run comprehensive build tests first:
+cd build_tests
+run_all_tests.bat
+```
 
 5. **Package for distribution:**
    ```bash
@@ -404,11 +457,13 @@ This packaging approach provides a **professional, distributable application** t
 ### What Happens Automatically (Zero Prerequisites)
 - ✅ **uv installed standalone** - No Python dependency, completely self-contained
 - ✅ **Python 3.11 installed via uv** - Managed in isolated environment
+- ✅ **Virtual environment creation** - Using `uv venv` to avoid package conflicts
 - ✅ **All build dependencies** installed ultra-fast with uv
 - ✅ **Runtime libraries** installed (audio processing, GUI, etc.)
 - ✅ **Standalone executable** created with all components bundled
-- ✅ **Build verification** with detailed success/error reporting
-- ✅ **Comprehensive troubleshooting** if any issues occur
+- ✅ **Build verification** with detailed success/error reporting (ASCII-compatible)
+- ✅ **Comprehensive troubleshooting** and build testing available
+- ✅ **Optional build tests** - Verify system health before building
 
 ### For End Users (Using the Executable)
 1. **Download** `ALF-AudioProcessing.exe` (single file, ~100-200MB)
