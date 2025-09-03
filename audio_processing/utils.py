@@ -6,8 +6,6 @@ including format validation, file management, and audio analysis helpers.
 """
 
 import os
-import librosa
-import numpy as np
 from pathlib import Path
 from typing import Union, List, Dict, Tuple, Optional
 import logging
@@ -15,6 +13,22 @@ import json
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+def _load_dependencies():
+    """Lazily import heavy optional dependencies."""
+    global librosa, np
+    if 'librosa' in globals() and 'np' in globals():
+        return
+    try:
+        import librosa  # type: ignore
+        import numpy as np  # type: ignore
+        globals()['librosa'] = librosa
+        globals()['np'] = np
+    except ImportError as e:
+        raise RuntimeError(
+            "Audio utilities require 'librosa' and 'numpy'. "
+            "Please run 'Setup All Environments' to install dependencies."
+        ) from e
 
 class AudioUtils:
     """
@@ -84,6 +98,7 @@ class AudioUtils:
             
             # Try to load the file
             try:
+                _load_dependencies()
                 audio_data, sr = librosa.load(str(path), sr=None, duration=1.0)  # Load only 1 second for testing
                 result['loadable'] = True
                 
@@ -118,6 +133,7 @@ class AudioUtils:
             Optional[float]: Duration in seconds, None if error
         """
         try:
+            _load_dependencies()
             duration = librosa.get_duration(path=str(file_path))
             return duration
         except Exception as e:
@@ -137,21 +153,23 @@ class AudioUtils:
             Dict[str, float]: Quality metrics
         """
         try:
+            _load_dependencies()
+
             # Basic statistics
             rms = np.sqrt(np.mean(audio_data**2))
             peak = np.max(np.abs(audio_data))
-            
+
             # Dynamic range
             db_range = 20 * np.log10(peak / (rms + 1e-10))
-            
+
             # Zero crossing rate (indicator of speech vs music)
             zcr = librosa.feature.zero_crossing_rate(audio_data)[0]
             avg_zcr = np.mean(zcr)
-            
+
             # Spectral centroid (brightness indicator)
             spectral_centroids = librosa.feature.spectral_centroid(y=audio_data, sr=sample_rate)[0]
             avg_centroid = np.mean(spectral_centroids)
-            
+
             # MFCC features (relevant for speech)
             mfccs = librosa.feature.mfcc(y=audio_data, sr=sample_rate, n_mfcc=13)
             mfcc_mean = np.mean(mfccs, axis=1)
@@ -200,12 +218,14 @@ class AudioUtils:
             
             # Load audio for quality analysis
             try:
+                _load_dependencies()
                 input_audio, input_sr = librosa.load(str(input_path), sr=None, duration=5.0)  # Analyze first 5 seconds
                 output_audio, output_sr = librosa.load(str(output_path), sr=None, duration=5.0)
-                
+
                 input_quality = AudioUtils.analyze_audio_quality(input_audio, input_sr)
                 output_quality = AudioUtils.analyze_audio_quality(output_audio, output_sr)
-            except:
+            except Exception as e:
+                logger.warning(f"Quality analysis skipped: {e}")
                 input_quality = {}
                 output_quality = {}
             

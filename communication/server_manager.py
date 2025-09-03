@@ -17,8 +17,15 @@ import subprocess
 import signal
 import time
 import logging
-import psutil
-import requests
+try:
+    import psutil  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    psutil = None
+
+try:
+    import requests  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    requests = None
 from pathlib import Path
 from typing import Dict, List, Optional, Union, Tuple
 import threading
@@ -102,9 +109,15 @@ class ServerManager:
         self.venv_dir = Path(".venvs")
         self.diarization_venv = self.venv_dir / "diarization"
         self.transcription_venv = self.venv_dir / "transcription"
-        
+
         logger.info("ServerManager initialized")
-    
+        if psutil is None or requests is None:
+            missing = [name for name, mod in (('psutil', psutil), ('requests', requests)) if mod is None]
+            logger.warning(
+                "Missing optional packages: " + ", ".join(missing) +
+                ". Install them via 'Setup All Environments' for full functionality."
+            )
+
     def setup_virtual_environments(self):
         """
         Set up virtual environments for diarization and transcription.
@@ -117,18 +130,31 @@ class ServerManager:
         try:
             # Create .venvs directory
             self.venv_dir.mkdir(exist_ok=True)
-            
+
             # Setup diarization environment
             self._setup_diarization_environment()
-            
+
             # Setup transcription environment
             self._setup_transcription_environment()
-            
+
             logger.info("Virtual environments setup completed")
-            
+
         except Exception as e:
             logger.error(f"Virtual environment setup failed: {e}")
             raise RuntimeError(f"Cannot setup virtual environments: {e}")
+
+    def _ensure_runtime_dependencies(self):
+        """Ensure optional runtime dependencies are available."""
+        missing = []
+        if psutil is None:
+            missing.append("psutil")
+        if requests is None:
+            missing.append("requests")
+        if missing:
+            raise RuntimeError(
+                "Missing required packages: " + ", ".join(missing) +
+                ". Please run 'Setup All Environments' to install dependencies."
+            )
     
     def _get_uv_executable(self):
         """Get the path to uv executable, checking bundled location first."""
@@ -356,8 +382,9 @@ class ServerManager:
         if self.is_server_running(server_type):
             logger.warning(f"{server_type.value} server is already running")
             return True
-        
+
         try:
+            self._ensure_runtime_dependencies()
             config = self.configs[server_type]
             
             # Update server info
