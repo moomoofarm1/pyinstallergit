@@ -386,6 +386,14 @@ class ServerManager:
         try:
             self._ensure_runtime_dependencies()
             config = self.configs[server_type]
+
+            # Automatically create required virtual environment if missing
+            if server_type == ServerType.DIARIZATION and not self.diarization_venv.exists():
+                logger.info("Diarization environment not found. Creating with uv...")
+                self._setup_diarization_environment()
+            elif server_type == ServerType.TRANSCRIPTION and not self.transcription_venv.exists():
+                logger.info("Transcription environment not found. Creating with uv...")
+                self._setup_transcription_environment()
             
             # Update server info
             self.servers[server_type] = ServerInfo(
