@@ -251,6 +251,112 @@ pyinstaller alf_gui.spec --clean --noconfirm
 
 For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
+### Branch Wrap-Up with PyInstaller
+
+To complete and package this branch for distribution:
+
+#### Prerequisites
+1. **Clone or pull the production branch:**
+   ```bash
+   git clone https://github.com/moomoofarm1/pyinstallergit.git
+   cd pyinstallergit
+   git checkout production
+   ```
+
+2. **Ensure Python 3.9+ is installed** and available in PATH
+
+#### Step-by-Step Packaging Process
+
+1. **Install build dependencies:**
+   ```bash
+   # Core build tools
+   pip install pyinstaller>=6.3 pyinstaller-hooks-contrib>=2024.0
+   
+   # Runtime dependencies (minimal set)
+   pip install uv librosa soundfile pydub scipy numpy requests pydantic pathlib2
+   ```
+
+2. **Verify uv installation:**
+   ```bash
+   # Install uv if not already available
+   pip install uv
+   
+   # Verify uv is in PATH
+   uv --version
+   ```
+
+3. **Create the standalone executable:**
+
+   **Option A: Automated Build (Recommended)**
+   ```batch
+   # On Windows
+   build.bat
+   ```
+   ```bash
+   # On Linux/macOS
+   chmod +x build.sh
+   ./build.sh
+   ```
+
+   **Option B: Manual Build**
+   ```bash
+   # Clean previous builds
+   rm -rf dist build version_info.txt  # Linux/macOS
+   # rmdir /s /q dist build & del version_info.txt  # Windows
+   
+   # Build executable
+   pyinstaller alf_gui.spec --clean --noconfirm
+   ```
+
+4. **Verify build success:**
+   ```bash
+   # Check if executable was created
+   ls -la dist/ALF-AudioProcessing.exe  # Linux/macOS
+   # dir dist\ALF-AudioProcessing.exe    # Windows
+   
+   # Test executable (optional)
+   # Double-click or run from command line to verify GUI launches
+   ```
+
+5. **Package for distribution:**
+   ```bash
+   # Create distribution package
+   mkdir ALF-Distribution
+   cp dist/ALF-AudioProcessing.exe ALF-Distribution/
+   cp readme.md DEPLOYMENT.md ALF-Distribution/
+   
+   # Create ZIP archive
+   zip -r ALF-v0.2.0-Windows.zip ALF-Distribution/
+   ```
+
+#### What Gets Packaged
+- **✅ Included in .exe (~100-200MB):**
+  - Complete tkinter GUI application
+  - Python 3.9+ interpreter
+  - Audio processing libraries (librosa, soundfile, pydub)
+  - uv package manager for dynamic installations
+  - Configuration files and documentation
+
+- **❌ NOT included (installed dynamically):**
+  - pyannote.audio (diarization) - installed when user clicks setup
+  - NeMo ASR (transcription) - installed when user clicks setup
+  - PyTorch, FastAPI, Label Studio - installed on-demand
+
+#### End User Experience
+1. **Download** `ALF-AudioProcessing.exe` (single file)
+2. **Run** executable (no Python installation required)
+3. **Setup** virtual environments via GUI (one-time, ~5-10 minutes)
+4. **Process** audio files using diarization and transcription pipelines
+5. **Clean exit** removes all virtual environments when done
+
+#### Troubleshooting
+- **Build fails**: Check that all dependencies are installed and uv is in PATH
+- **Large file size**: Normal for bundled Python application (~100-200MB)
+- **Antivirus warnings**: Add exclusions for build directory and executable
+- **Missing uv**: Will fallback to pip, but installation will be slower
+
+This packaging approach provides a **professional, distributable application** that users can run without any Python setup while maintaining the flexibility to install ML components dynamically.
+
 ## Development Status
 
 - ✅ **Audio Preprocessing**: Complete with comprehensive testing
