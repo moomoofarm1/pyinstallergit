@@ -1,105 +1,134 @@
 @echo off
 REM Build script for ALF GUI application on Windows
-REM This script automatically installs uv, Python dependencies, and creates a standalone .exe file with PyInstaller
+REM This script installs uv standalone, uses uv to install Python, then creates a standalone .exe file with PyInstaller
 
 echo ====================================
 echo ALF - Advanced Audio Label Frontend
-echo Automated Build Script for Windows
+echo Fully Automated Build Script for Windows
 echo ====================================
+echo.
+echo This script will automatically:
+echo 1. Install uv (standalone Python package manager)
+echo 2. Use uv to install Python 3.11
+echo 3. Install all build dependencies
+echo 4. Create standalone executable with PyInstaller
+echo.
 
-REM Check if Python is available (try multiple variants)
-set PYTHON_CMD=
-python --version >nul 2>&1
+REM Step 1: Install uv as standalone tool (no Python required)
+echo Step 1: Installing uv standalone package manager...
+echo uv is a fast Python package manager that doesn't require Python to be pre-installed.
+
+REM Check if uv is already installed
+uv --version >nul 2>&1
 if not errorlevel 1 (
-    set PYTHON_CMD=python
-    goto python_found
+    echo ✓ uv is already installed!
+    uv --version
+    goto uv_ready
 )
 
-py --version >nul 2>&1
-if not errorlevel 1 (
-    set PYTHON_CMD=py
-    goto python_found
+echo Installing uv via PowerShell (official installer)...
+echo This will download and install uv without requiring Python.
+
+REM Install uv using the official standalone installer
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+if errorlevel 1 (
+    echo ❌ ERROR: Failed to install uv via PowerShell
+    echo.
+    echo Trying alternative installation method...
+    echo Downloading uv manually...
+    
+    REM Try manual download as fallback
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    if errorlevel 1 (
+        echo ❌ ERROR: All uv installation methods failed
+        echo.
+        echo Please install uv manually:
+        echo 1. Visit https://docs.astral.sh/uv/getting-started/installation/
+        echo 2. Follow Windows installation instructions
+        echo 3. Restart Command Prompt and run this script again
+        pause
+        exit /b 1
+    )
 )
 
-python3 --version >nul 2>&1
-if not errorlevel 1 (
-    set PYTHON_CMD=python3
-    goto python_found
-)
+REM Refresh PATH to include uv
+set PATH=%PATH%;%USERPROFILE%\.cargo\bin
+set PATH=%PATH%;%USERPROFILE%\.local\bin
 
-echo ERROR: Python is not installed or not accessible
-echo.
-echo This script will attempt to guide you through Python installation.
-echo Please install Python 3.9+ using one of these methods:
-echo.
-echo Method 1 - Official Python installer (Recommended):
-echo   1. Download from https://python.org/downloads/
-echo   2. During installation, check "Add Python to PATH"
-echo   3. Restart Command Prompt after installation
-echo   4. Run this script again
-echo.
-echo Method 2 - Microsoft Store:
-echo   1. Open Microsoft Store
-echo   2. Search for "Python 3.9" or newer
-echo   3. Install and restart Command Prompt
-echo   4. Run this script again
-echo.
-echo Method 3 - Check if Python is installed but not in PATH:
-echo   Try running: py --version
-echo   If it works, Python is installed but PATH needs fixing
-echo.
-echo Opening Python download page...
-start https://python.org/downloads/
-echo.
-pause
-exit /b 1
-
-:python_found
-echo Found Python: %PYTHON_CMD%
-%PYTHON_CMD% --version
-
-echo.
-echo Step 0: Installing uv package manager first (required for build)...
-echo This is the modern Python package installer that will manage all dependencies.
-%PYTHON_CMD% -m pip install --upgrade pip
-%PYTHON_CMD% -m pip install uv
-
+:uv_ready
 echo.
 echo Verifying uv installation...
-uv --version >nul 2>&1
+uv --version
 if errorlevel 1 (
-    echo Warning: uv not found in PATH after installation
-    echo Continuing with pip fallback...
-    set UV_CMD=%PYTHON_CMD% -m pip
-) else (
-    echo uv installed successfully!
-    set UV_CMD=uv pip
-)
-
-REM Check if we're in the correct directory
-if not exist "main.py" (
-    echo ERROR: main.py not found. Please run this script from the project root directory.
+    echo ❌ ERROR: uv is not accessible in PATH
+    echo Please restart Command Prompt and try again
     pause
     exit /b 1
 )
 
+echo ✓ uv installed successfully!
+
+REM Step 2: Use uv to install Python 3.11
 echo.
-echo Step 1: Installing build dependencies with uv...
+echo Step 2: Installing Python 3.11 using uv...
+echo uv will manage Python installation automatically.
+
+uv python install 3.11
+if errorlevel 1 (
+    echo ❌ ERROR: Failed to install Python 3.11 with uv
+    echo.
+    echo Troubleshooting:
+    echo 1. Check internet connection
+    echo 2. Ensure sufficient disk space
+    echo 3. Try running as Administrator
+    pause
+    exit /b 1
+)
+
+echo ✓ Python 3.11 installed successfully via uv!
+
+REM Use uv-managed Python
+set PYTHON_CMD=uv run python
+set UV_CMD=uv add
+
+REM Check if we're in the correct directory
+if not exist "main.py" (
+    echo ❌ ERROR: main.py not found. Please run this script from the project root directory.
+    pause
+    exit /b 1
+)
+
+REM Step 3: Initialize uv project and install dependencies
+echo.
+echo Step 3: Initializing uv project and installing all dependencies...
+echo This will create a virtual environment and install all required packages.
+
+REM Initialize uv project if pyproject.toml doesn't exist or update it
+echo Creating/updating pyproject.toml for build...
+uv init --no-readme --no-workspace
+
+echo.
+echo Step 4: Installing build dependencies with uv...
 echo Installing PyInstaller and hooks...
-%UV_CMD% install pyinstaller>=6.3 pyinstaller-hooks-contrib>=2024.0
+uv add pyinstaller>=6.3 pyinstaller-hooks-contrib>=2024.0
 
 echo.
-echo Step 2: Installing minimal runtime dependencies with uv...
+echo Step 5: Installing runtime dependencies with uv...
 echo Installing core audio processing and GUI libraries...
-%UV_CMD% install librosa soundfile pydub scipy numpy requests pydantic pathlib2 tkinter
+uv add librosa soundfile pydub scipy numpy requests pydantic
 
 echo.
-echo Step 3: Ensuring all build tools are ready...
-echo Upgrading build tools to latest versions...
-%PYTHON_CMD% -m pip install --upgrade pyinstaller setuptools wheel
+echo Step 6: Installing additional build tools...
+echo Ensuring setuptools and wheel are available...
+uv add setuptools wheel
+
+REM Set Python command to use uv-managed environment
+set PYTHON_CMD=uv run python
 
 echo.
-echo Step 4: Cleaning previous build...
+echo Step 7: Cleaning previous build...
 echo Removing old build artifacts...
 if exist "dist" rmdir /s /q "dist"
 if exist "build" rmdir /s /q "build"
@@ -107,7 +136,7 @@ if exist "__pycache__" rmdir /s /q "__pycache__"
 if exist "version_info.txt" del "version_info.txt"
 
 echo.
-echo Step 5: Preparing build environment...
+echo Step 8: Preparing build environment...
 echo Creating assets directory if needed...
 if not exist "assets" mkdir "assets"
 if not exist "assets\alf_icon.ico" (
@@ -117,13 +146,14 @@ if not exist "assets\alf_icon.ico" (
 )
 
 echo.
-echo Step 6: Building ALF standalone executable with PyInstaller...
+echo Step 9: Building ALF standalone executable with PyInstaller...
 echo This will create a single .exe file with all dependencies bundled.
 echo Note: uv package manager will be included for dynamic ML component installation.
+echo Using uv-managed Python environment for consistent builds...
 %PYTHON_CMD% -m pyinstaller alf_gui.spec --clean --noconfirm --log-level=INFO
 
 echo.
-echo Step 7: Verifying build and testing executable...
+echo Step 10: Verifying build and testing executable...
 if exist "dist\ALF-AudioProcessing.exe" (
     echo ✓ SUCCESS: ALF executable created successfully!
     echo.
@@ -133,7 +163,7 @@ if exist "dist\ALF-AudioProcessing.exe" (
     echo │                                                         │
     echo │ The standalone executable includes:                     │
     echo │ ✓ Tkinter GUI application                              │
-    echo │ ✓ Python 3.9+ interpreter                             │
+    echo │ ✓ Python 3.11 interpreter (via uv)                   │
     echo │ ✓ Audio processing libraries (librosa, soundfile)     │
     echo │ ✓ uv package manager for ML component installation    │
     echo │ ✓ All required runtime dependencies                    │
@@ -141,7 +171,7 @@ if exist "dist\ALF-AudioProcessing.exe" (
     echo.
     echo 🎯 End User Experience:
     echo   1. Download and run ALF-AudioProcessing.exe
-    echo   2. No Python installation required
+    echo   2. No Python or uv installation required
     echo   3. Click "Setup All Environments" for ML components
     echo   4. Process audio files with diarization and transcription
     echo   5. Use "Exit ALF (Remove Environments)" for clean removal
@@ -168,7 +198,7 @@ if exist "dist\ALF-AudioProcessing.exe" (
 )
 
 echo.
-echo Step 8: Final cleanup...
+echo Step 11: Final cleanup...
 if exist "version_info.txt" del "version_info.txt"
 echo Removing temporary build files...
 
@@ -177,13 +207,19 @@ echo ====================================
 echo 🎉 BUILD COMPLETED SUCCESSFULLY! 🎉
 echo ====================================
 echo.
-echo Your ALF executable is ready for distribution.
-echo Location: dist\ALF-AudioProcessing.exe
+echo ✨ Your ALF executable is ready for distribution!
+echo 📍 Location: dist\ALF-AudioProcessing.exe
 echo.
-echo Next steps:
-echo 1. Test the executable by double-clicking it
-echo 2. Package for distribution (see DEPLOYMENT.md)
-echo 3. Share with end users - no Python installation required!
+echo 🚀 What was accomplished:
+echo   ✅ uv installed as standalone tool (no Python dependency)
+echo   ✅ Python 3.11 installed and managed by uv
+echo   ✅ All dependencies installed in isolated uv environment
+echo   ✅ Standalone executable created with everything bundled
+echo.
+echo 📋 Next steps:
+echo   1. Test the executable by double-clicking it
+echo   2. Package for distribution (see DEPLOYMENT.md)
+echo   3. Share with end users - no Python or uv installation required!
 echo.
 echo Press any key to exit...
 pause >nul

@@ -257,7 +257,7 @@ To complete and package this branch for distribution:
 
 #### Prerequisites
 
-**🎯 SIMPLIFIED PROCESS: Just need Python, everything else is automated!**
+**🎯 ZERO PREREQUISITES: Everything is fully automated!**
 
 1. **Clone or pull the production branch:**
    ```bash
@@ -266,31 +266,19 @@ To complete and package this branch for distribution:
    git checkout production
    ```
 
-2. **Install Python 3.9+ on Windows (ONLY REQUIREMENT):**
+2. **That's it! No Python installation required!**
+   
+   The build script will automatically:
+   - ✅ Install uv as a standalone tool (no Python required)
+   - ✅ Use uv to install Python 3.11 automatically
+   - ✅ Install all build dependencies in isolated environment
+   - ✅ Create standalone executable
 
-   **Method 1 - Official Python installer (Recommended):**
-   - Download from [python.org/downloads](https://python.org/downloads/)
-   - **IMPORTANT**: During installation, check ✅ "Add Python to PATH"
-   - Restart Command Prompt after installation
-   - Test: `python --version` or `py --version`
-
-   **Method 2 - Microsoft Store:**
-   - Open Microsoft Store
-   - Search for "Python 3.9" or newer version
-   - Install and restart Command Prompt
-   - Test: `python --version`
-
-   **Method 3 - Check existing installation:**
-   ```batch
-   # Try these commands to see if Python is already installed:
-   python --version
-   py --version  
-   python3 --version
-   ```
-
-   **If Python is installed but not in PATH:**
-   - Find Python installation (usually `C:\Users\%USERNAME%\AppData\Local\Programs\Python\`)
-   - Add to PATH manually or reinstall with "Add to PATH" option
+   **🎉 TRUE ZERO-DEPENDENCY BUILD:**
+   - No Python pre-installation needed
+   - No manual package management  
+   - No PATH configuration required
+   - Works on any Windows 10+ system with internet access
 
 #### Step-by-Step Packaging Process
 
@@ -309,29 +297,39 @@ The build script now automatically handles all dependencies and packaging:
    ```
 
 **What the automated build does:**
-1. ✅ **Detects Python installation** (python, py, python3 variants)
-2. ✅ **Automatically installs uv** package manager first
-3. ✅ **Installs all build dependencies** using uv for faster installation
-4. ✅ **Installs runtime dependencies** (librosa, soundfile, pydub, etc.)
-5. ✅ **Creates standalone executable** with PyInstaller
+1. ✅ **Installs uv standalone** (no Python dependency - completely self-contained)
+2. ✅ **Uses uv to install Python 3.11** automatically in isolated environment
+3. ✅ **Installs all build dependencies** using uv for ultra-fast installation
+4. ✅ **Installs runtime dependencies** (librosa, soundfile, pydub, etc.) via uv
+5. ✅ **Creates standalone executable** with PyInstaller using uv-managed Python
 6. ✅ **Bundles uv package manager** for dynamic ML component installation
 7. ✅ **Verifies build success** with detailed reporting
-8. ✅ **Provides troubleshooting** if any issues occur
+8. ✅ **Provides comprehensive troubleshooting** if any issues occur
 
 **🔧 Manual Build (Advanced Users Only)**
 
 If you need manual control over the build process:
 
-1. **Install uv first:**
+1. **Install uv standalone (no Python required):**
    ```bash
-   pip install --upgrade pip
-   pip install uv
+   # Windows (PowerShell)
+   irm https://astral.sh/uv/install.ps1 | iex
+   
+   # Linux/macOS
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-2. **Install build dependencies:**
+2. **Initialize project and install Python + dependencies:**
    ```bash
-   uv pip install pyinstaller>=6.3 pyinstaller-hooks-contrib>=2024.0
-   uv pip install librosa soundfile pydub scipy numpy requests pydantic pathlib2
+   # Install Python via uv
+   uv python install 3.11
+   
+   # Initialize project
+   uv init --no-readme --no-workspace
+   
+   # Install dependencies
+   uv add pyinstaller>=6.3 pyinstaller-hooks-contrib>=2024.0
+   uv add librosa soundfile pydub scipy numpy requests pydantic setuptools wheel
    ```
 
 3. **Build executable:**
@@ -340,8 +338,8 @@ If you need manual control over the build process:
    rm -rf dist build __pycache__ version_info.txt  # Linux/macOS
    # rmdir /s /q dist build __pycache__ & del version_info.txt  # Windows
    
-   # Build with PyInstaller
-   python -m pyinstaller alf_gui.spec --clean --noconfirm --log-level=INFO
+   # Build with PyInstaller using uv-managed Python
+   uv run python -m pyinstaller alf_gui.spec --clean --noconfirm --log-level=INFO
    ```
 
 **✅ Build Verification:**
@@ -394,36 +392,38 @@ This packaging approach provides a **professional, distributable application** t
 
 ---
 
-## 🚀 NEW: Fully Automated Build Process
+## 🚀 NEW: Zero-Dependency Fully Automated Build Process
 
-**The build process has been completely automated for maximum ease of use:**
+**The build process requires NO pre-installed software - completely self-contained:**
 
 ### For Developers (Building the Executable)
-1. **Install Python 3.9+** (with "Add to PATH" checked)
-2. **Run one command:** `build.bat` (Windows) or `./build.sh` (Linux/macOS)
-3. **Done!** - Everything else is automatic
+1. **Clone repository** (only requirement)
+2. **Run one command:** `build.bat` (Windows) or `./build.sh` (Linux/macOS)  
+3. **Done!** - Everything installs and builds automatically
 
-### What Happens Automatically
-- ✅ **uv package manager** installed first for faster dependency management
-- ✅ **All build dependencies** installed (PyInstaller, hooks, etc.)
+### What Happens Automatically (Zero Prerequisites)
+- ✅ **uv installed standalone** - No Python dependency, completely self-contained
+- ✅ **Python 3.11 installed via uv** - Managed in isolated environment
+- ✅ **All build dependencies** installed ultra-fast with uv
 - ✅ **Runtime libraries** installed (audio processing, GUI, etc.)
 - ✅ **Standalone executable** created with all components bundled
 - ✅ **Build verification** with detailed success/error reporting
-- ✅ **Troubleshooting guidance** if issues occur
+- ✅ **Comprehensive troubleshooting** if any issues occur
 
 ### For End Users (Using the Executable)
 1. **Download** `ALF-AudioProcessing.exe` (single file, ~100-200MB)
-2. **Run** executable (no installation required)
+2. **Run** executable (no Python, uv, or any installation required)
 3. **Click "Setup All Environments"** for ML components (one-time)
 4. **Process audio files** with professional-grade ML pipelines
 5. **Clean exit** removes all temporary files when done
 
-### Key Benefits
-- **🎯 One-click build** - No manual dependency management
-- **🚀 Fast installation** - uv provides 10-100x faster package installation
-- **🔧 Smart fallbacks** - Automatically handles different Python installations
-- **📦 Professional packaging** - Ready for enterprise distribution
-- **🛡️ Comprehensive testing** - Built-in verification and troubleshooting
+### Revolutionary Benefits
+- **🎯 TRUE zero-dependency build** - No Python, pip, or any pre-installation needed
+- **🚀 Ultra-fast installation** - uv provides 10-100x faster package installation
+- **🔧 Complete automation** - No manual dependency management ever
+- **🌐 Universal compatibility** - Works on any Windows 10+ with internet
+- **📦 Enterprise-ready** - Professional packaging with comprehensive error handling
+- **🛡️ Bulletproof reliability** - Built-in verification and detailed troubleshooting
 
 ## Development Status
 
