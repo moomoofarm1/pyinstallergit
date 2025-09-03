@@ -110,21 +110,37 @@ uv venv .venv --python 3.11
 
 echo.
 echo Step 4: Installing build dependencies with uv...
-echo Installing PyInstaller and hooks...
-uv pip install pyinstaller>=6.3 pyinstaller-hooks-contrib>=2024.0
+echo Installing PyInstaller and hooks in virtual environment...
+uv pip install --python .venv\Scripts\python.exe pyinstaller>=6.3 pyinstaller-hooks-contrib>=2024.0
 
 echo.
 echo Step 5: Installing runtime dependencies with uv...
-echo Installing core audio processing and GUI libraries...
-uv pip install librosa soundfile pydub scipy numpy requests pydantic
+echo Installing core audio processing and GUI libraries in virtual environment...
+uv pip install --python .venv\Scripts\python.exe librosa soundfile pydub scipy numpy requests pydantic
 
 echo.
 echo Step 6: Installing additional build tools...
-echo Ensuring setuptools and wheel are available...
-uv pip install setuptools wheel
+echo Ensuring setuptools and wheel are available in virtual environment...
+uv pip install --python .venv\Scripts\python.exe setuptools wheel
 
 REM Set Python command to use uv-managed virtual environment
 set PYTHON_CMD=.venv\Scripts\python.exe
+
+echo.
+echo Step 6b: Verifying PyInstaller installation...
+%PYTHON_CMD% -c "import pyinstaller; print('PyInstaller version:', pyinstaller.__version__)" 2>nul
+if errorlevel 1 (
+    echo ERROR: PyInstaller not properly installed in virtual environment
+    echo Attempting to reinstall...
+    uv pip install --python .venv\Scripts\python.exe --force-reinstall pyinstaller>=6.3
+    %PYTHON_CMD% -c "import pyinstaller; print('PyInstaller version:', pyinstaller.__version__)" 2>nul
+    if errorlevel 1 (
+        echo ERROR: PyInstaller installation failed completely
+        pause
+        exit /b 1
+    )
+)
+echo PyInstaller verified and ready!
 
 echo.
 echo Step 7: Cleaning previous build...
@@ -156,9 +172,11 @@ echo Step 10: Verifying build and testing executable...
 if exist "dist\ALF-AudioProcessing.exe" (
     echo SUCCESS: ALF executable created successfully!
     echo.
+    echo File size information:
+    dir "dist\ALF-AudioProcessing.exe" | findstr "ALF-AudioProcessing.exe"
+    echo.
     echo +-- Build Summary ------------------------------------------+
     echo ^| Location: dist\ALF-AudioProcessing.exe                  ^|
-    for %%A in ("dist\ALF-AudioProcessing.exe") do echo ^| Size: %%~zA bytes                                        ^|
     echo ^|                                                         ^|
     echo ^| The standalone executable includes:                     ^|
     echo ^| * Tkinter GUI application                              ^|

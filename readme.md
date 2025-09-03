@@ -372,6 +372,19 @@ Solution: This error was fixed in the latest version. The build script now uses
 `uv venv` instead of `uv init` to avoid package discovery conflicts.
 ```
 
+**Error: "No module named pyinstaller"**
+```
+Solution: Fixed in latest version. The build script now uses:
+uv pip install --python .venv\Scripts\python.exe pyinstaller>=6.3
+This ensures PyInstaller is installed in the correct virtual environment.
+```
+
+**Error: "The syntax of the command is incorrect"**
+```
+Solution: Fixed in latest version. Replaced problematic FOR loops with 
+simple file listing commands for better Command Prompt compatibility.
+```
+
 **Error: "uv not found" or "uv installation failed"**
 ```batch
 # Manual uv installation:

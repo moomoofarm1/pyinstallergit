@@ -54,7 +54,19 @@ if errorlevel 1 (
 )
 
 echo.
-echo Test 5: Testing PyInstaller spec file validation...
+echo Test 5: Testing PyInstaller module import...
+.test_build_venv\Scripts\python.exe -c "import pyinstaller; print('PyInstaller version:', pyinstaller.__version__)" 2>nul
+if errorlevel 1 (
+    echo [FAIL] PyInstaller module cannot be imported
+    set /a TEST_FAILED+=1
+    goto cleanup
+) else (
+    echo [PASS] PyInstaller module imports successfully
+    set /a TEST_PASSED+=1
+)
+
+echo.
+echo Test 6: Testing PyInstaller spec file validation...
 .test_build_venv\Scripts\python.exe -m pyinstaller --help >nul 2>&1
 if errorlevel 1 (
     echo [FAIL] PyInstaller not working in test environment
@@ -66,7 +78,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo Test 6: Testing main.py syntax validation...
+echo Test 7: Testing main.py syntax validation...
 .test_build_venv\Scripts\python.exe -m py_compile main.py
 if errorlevel 1 (
     echo [FAIL] main.py has syntax errors
@@ -78,7 +90,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo Test 7: Testing import dependencies from main.py...
+echo Test 8: Testing import dependencies from main.py...
 .test_build_venv\Scripts\python.exe -c "import sys; sys.path.insert(0, '.'); import main" 2>nul
 if errorlevel 1 (
     echo [FAIL] main.py has import errors (this may be normal for GUI apps)
@@ -90,7 +102,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo Test 8: Testing PyInstaller analysis (dry run)...
+echo Test 9: Testing PyInstaller analysis (dry run)...
 .test_build_venv\Scripts\python.exe -m pyinstaller alf_gui.spec --dry-run --log-level=WARN 2>nul
 if errorlevel 1 (
     echo [FAIL] PyInstaller analysis failed - check alf_gui.spec
@@ -103,7 +115,7 @@ if errorlevel 1 (
 
 :cleanup
 echo.
-echo Test 9: Cleaning up test environment...
+echo Test 10: Cleaning up test environment...
 if exist ".test_build_venv" rmdir /s /q ".test_build_venv"
 if exist "test_dist" rmdir /s /q "test_dist"
 if exist "test_build" rmdir /s /q "test_build"
