@@ -12,13 +12,9 @@ for both diarization (pyannote.audio) and transcription (NeMo ASR) pipelines.
 """
 
 import os
-import librosa
-import soundfile as sf
 from pathlib import Path
 from typing import Union, Optional
 import logging
-from pydub import AudioSegment
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +40,33 @@ class AudioPreprocessor:
         # Create output directory for processed files
         self.output_dir = Path("processed_audio")
         self.output_dir.mkdir(exist_ok=True)
-        
+
+        # Flag to track lazy-loaded dependencies
+        self._deps_loaded = False
+
         logger.info(f"AudioPreprocessor initialized: {target_sample_rate}Hz, {target_channels} channels")
+
+    def _load_dependencies(self):
+        """Lazily load heavy audio processing dependencies."""
+        if self._deps_loaded:
+            return
+        try:
+            import librosa  # type: ignore
+            import soundfile as sf  # type: ignore
+            from pydub import AudioSegment  # type: ignore
+            import numpy as np  # type: ignore
+        except ImportError as e:
+            raise RuntimeError(
+                "Required audio processing packages are missing. "
+                "Please run 'Setup All Environments' to install dependencies."
+            ) from e
+
+        # Store references to loaded modules
+        self.librosa = librosa
+        self.sf = sf
+        self.AudioSegment = AudioSegment
+        self.np = np
+        self._deps_loaded = True
     
     def preprocess_mp3_to_mono_16k(self, input_path: Union[str, Path]) -> str:
         """
@@ -69,6 +90,13 @@ class AudioPreprocessor:
             ValueError: If input file is not a valid audio file
             RuntimeError: If preprocessing fails
         """
+        self._load_dependencies()
+
+        librosa = self.librosa
+        sf = self.sf
+        AudioSegment = self.AudioSegment
+        np = self.np
+
         input_path = Path(input_path)
         
         # Validate input file
@@ -106,7 +134,7 @@ class AudioPreprocessor:
             else:
                 # Method 2: Use librosa for other formats (more precise)
                 audio_data, original_sr = librosa.load(
-                    str(input_path), 
+                    str(input_path),
                     sr=self.target_sample_rate,  # Automatically resample
                     mono=True  # Convert to mono
                 )
@@ -143,6 +171,11 @@ class AudioPreprocessor:
             output_path (Path): Path to the processed audio file
         """
         try:
+            self._load_dependencies()
+            librosa = self.librosa
+            sf = self.sf
+            np = self.np
+
             # Load and validate the processed file
             audio_data, sample_rate = librosa.load(str(output_path), sr=None, mono=False)
             
@@ -189,9 +222,12 @@ class AudioPreprocessor:
             output_path (Path): Processed output file path
         """
         try:
+            self._load_dependencies()
+            librosa = self.librosa
+
             # Input file stats
             input_size = input_path.stat().st_size / (1024 * 1024)  # MB
-            
+
             # Output file stats
             output_size = output_path.stat().st_size / (1024 * 1024)  # MB
             output_data, output_sr = librosa.load(str(output_path), sr=None)
@@ -261,15 +297,19 @@ class AudioPreprocessor:
             dict: Dictionary containing audio file information
         """
         audio_path = Path(audio_path)
-        
+
         try:
+            self._load_dependencies()
+            librosa = self.librosa
+            np = self.np
+
             # Load audio metadata
             audio_data, sample_rate = librosa.load(str(audio_path), sr=None, mono=False)
-            
+
             # Calculate statistics
             duration = len(audio_data) / sample_rate if len(audio_data.shape) == 1 else len(audio_data[0]) / sample_rate
             file_size = audio_path.stat().st_size / (1024 * 1024)  # MB
-            
+
             # Handle stereo/mono
             if len(audio_data.shape) == 1:
                 channels = 1
@@ -279,7 +319,7 @@ class AudioPreprocessor:
                 channels = audio_data.shape[0]
                 rms_level = np.sqrt(np.mean(audio_data**2))
                 peak_level = np.max(np.abs(audio_data))
-            
+
             return {
                 'filename': audio_path.name,
                 'duration_seconds': round(duration, 2),
@@ -291,7 +331,7 @@ class AudioPreprocessor:
                 'format': audio_path.suffix.lower(),
                 'is_preprocessed': sample_rate == self.target_sample_rate and channels == 1
             }
-            
+
         except Exception as e:
             logger.error(f"Could not get audio info for {audio_path}: {e}")
             return {'error': str(e)}

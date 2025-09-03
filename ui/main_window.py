@@ -117,8 +117,12 @@ class AudioProcessingApp:
                                    command=self.preprocess_audio)
         preprocess_btn.grid(row=1, column=0, pady=(10, 0), sticky=tk.W)
         
-        self.preprocess_status_var = tk.StringVar(value="")\n        preprocess_status = ttk.Label(file_frame, textvariable=self.preprocess_status_var, 
-                                     foreground="green")
+        self.preprocess_status_var = tk.StringVar(value="")
+        preprocess_status = ttk.Label(
+            file_frame,
+            textvariable=self.preprocess_status_var,
+            foreground="green"
+        )
         preprocess_status.grid(row=1, column=1, columnspan=2, pady=(10, 0), sticky=tk.W, padx=(10, 0))
     
     def setup_pipeline_section(self, parent: ttk.Frame, row: int):
