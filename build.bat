@@ -116,7 +116,7 @@ uv pip install --python .venv\Scripts\python.exe pyinstaller>=6.3 pyinstaller-ho
 echo.
 echo Step 5: Installing runtime dependencies with uv...
 echo Installing core audio processing and GUI libraries in virtual environment...
-uv pip install --python .venv\Scripts\python.exe librosa soundfile pydub scipy numpy requests pydantic
+uv pip install --python .venv\Scripts\python.exe librosa soundfile pydub scipy numpy requests pydantic tzdata
 
 echo.
 echo Step 6: Installing additional build tools...
@@ -187,8 +187,11 @@ if exist "dist\ALF-AudioProcessing.exe" (
     echo SUCCESS: ALF executable created successfully!
     echo.
     echo File size information:
-    dir "dist\ALF-AudioProcessing.exe" 2>nul | findstr "ALF-AudioProcessing.exe" 2>nul
-    if errorlevel 1 echo [Could not display file size details]
+    if exist "dist\ALF-AudioProcessing.exe" (
+        for %%i in ("dist\ALF-AudioProcessing.exe") do echo File size: %%~zi bytes
+    ) else (
+        echo [Executable file not found]
+    )
     echo.
     echo +-- Build Summary ------------------------------------------+
     echo ^| Location: dist\ALF-AudioProcessing.exe                  ^|

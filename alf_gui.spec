@@ -69,6 +69,8 @@ hiddenimports = [
     'librosa',
     'soundfile',
     'scipy',
+    'scipy.special',
+    'scipy.special._cdflib',
     'numpy',
     'pydub',
     
@@ -112,6 +114,8 @@ hiddenimports = [
     'signal',
     'time',
     'webbrowser',
+    'tzdata',
+    'zoneinfo',
 ]
 
 # Excludes - modules we don't want to include
@@ -163,36 +167,8 @@ a = Analysis(
     noarchive=False,
 )
 
-# Remove duplicate files
-pyz = PYZ(a.pure, a.zipped_data, cipher=None)
-
-# Create executable
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name=APP_NAME,
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,  # Hide console window
-    disable_windowed_traceback=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    version='version_info.txt',  # Will create this file
-    icon='assets/alf_icon.ico',  # Will create this file
-)
-
-# Version information for Windows
-version_info = f"""
-VSVersionInfo(
+# Version information for Windows (create file before EXE())
+version_info = f"""VSVersionInfo(
   ffi=FixedFileInfo(
     filevers=({VERSION.replace('.', ', ')}, 0),
     prodvers=({VERSION.replace('.', ', ')}, 0),
@@ -223,12 +199,43 @@ VSVersionInfo(
     ),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
   ]
-)
-"""
+)"""
 
-# Write version info file
-with open('version_info.txt', 'w') as f:
-    f.write(version_info)
+# Write version info file BEFORE EXE() constructor uses it
+try:
+    with open('version_info.txt', 'w') as f:
+        f.write(version_info)
+    print("Created version_info.txt for Windows executable metadata")
+except Exception as e:
+    print(f"Warning: Could not create version_info.txt: {e}")
+
+# Remove duplicate files
+pyz = PYZ(a.pure, a.zipped_data, cipher=None)
+
+# Create executable
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    [],
+    name=APP_NAME,
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=False,  # Hide console window
+    disable_windowed_traceback=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    version='version_info.txt' if os.path.exists('version_info.txt') else None,
+    icon='assets/alf_icon.ico' if os.path.exists('assets/alf_icon.ico') else None,
+)
+
 
 print(f"""
 PyInstaller Spec Configuration Summary:

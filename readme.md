@@ -423,6 +423,24 @@ If you see this error with the old version, the build actually succeeded.
 The latest version has more robust PyInstaller verification.
 ```
 
+**Error: "FileNotFoundError: version_info.txt"**
+```
+Solution: Fixed in latest version. The alf_gui.spec file now creates the 
+version_info.txt file before PyInstaller tries to read it. This was a 
+file ordering issue in the spec file configuration.
+```
+
+**PyInstaller Warnings: "Hidden import not found"**
+```
+These warnings are usually harmless and the build will succeed:
+- "tzdata not found" - timezone data (now included in dependencies)
+- "scipy.special._cdflib not found" - scipy internal module
+- "tbb12.dll not found" - Intel Threading Building Blocks (optional)
+
+The latest version includes common missing imports in the spec file
+to reduce warning noise, but warnings don't prevent successful builds.
+```
+
 **Unicode character display issues**
 ```
 The latest build script fixes Unicode character issues in Command Prompt.
