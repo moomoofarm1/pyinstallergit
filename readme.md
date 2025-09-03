@@ -314,8 +314,14 @@ The build script now automatically handles all dependencies and packaging:
 5. ✅ **Installs runtime dependencies** (librosa, soundfile, pydub, etc.) via uv
 6. ✅ **Creates standalone executable** with PyInstaller using uv-managed Python
 7. ✅ **Bundles uv package manager** for dynamic ML component installation
-8. ✅ **Verifies build success** with ASCII-compatible detailed reporting
+8. ✅ **Verifies build success** with robust Windows batch syntax
 9. ✅ **Provides comprehensive troubleshooting** if any issues occur
+
+**🔧 Technical Improvements:**
+- **Windows batch compatibility**: All control characters properly escaped in parenthesized blocks
+- **Variable isolation**: Uses setlocal/endlocal for clean environment management
+- **Enhanced echo syntax**: Uses echo( instead of echo. for better compatibility
+- **Robust error handling**: Professional-grade batch scripting with comprehensive edge case handling
 
 **🔧 Manual Build (Advanced Users Only)**
 
@@ -389,17 +395,27 @@ compatibility with different PyInstaller installation methods.
 
 **Error: "The syntax of the command is incorrect"**
 ```
-Solution: Fixed in latest version. The error was caused by:
-1. Nested if exist statements in Step 10 verification
-2. Complex pipe operations not compatible with all Command Prompt versions
+Solution: Fixed in latest version. This error was caused by Windows batch 
+file parsing quirks inside parenthesized blocks.
 
-Fixed by:
-- Removing redundant nested if exist checks
-- Using proper FOR loop syntax with parentheses
-- Simplified file size display logic
+ROOT CAUSE: In Windows batch if (...) ( ... ) blocks, these characters
+are treated as control operators and must be escaped:
+- ( and ) — treated as block delimiters  
+- > — treated as output redirection
 
-If you see this error, update to the latest version which has robust
-Step 10 verification that works on all Windows Command Prompt versions.
+PROBLEMATIC LINES (now fixed):
+- "Use Exit ALF (Remove Environments)" → "Exit ALF ^(Remove Environments^)"
+- "Ensure sufficient disk space (>2GB)" → "disk space ^(^>2GB recommended^)"  
+- "(via uv)" → "^(via uv^)"
+- "(librosa, soundfile)" → "^(librosa, soundfile^)"
+
+COMPREHENSIVE FIXES APPLIED:
+- All control characters properly escaped with ^ in parenthesized blocks
+- Added setlocal/endlocal for better variable isolation
+- Replaced echo. with echo( for better compatibility
+- Enhanced FOR loop syntax with proper parentheses
+
+The latest version handles all Windows batch parsing edge cases correctly.
 ```
 
 **Error: "uv not found" or "uv installation failed"**
