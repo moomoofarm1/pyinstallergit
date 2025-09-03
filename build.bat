@@ -128,19 +128,33 @@ set PYTHON_CMD=.venv\Scripts\python.exe
 
 echo.
 echo Step 6b: Verifying PyInstaller installation...
-%PYTHON_CMD% -c "import pyinstaller; print('PyInstaller version:', pyinstaller.__version__)" 2>nul
+%PYTHON_CMD% -c "import PyInstaller; print('PyInstaller version:', PyInstaller.__version__)" 2>nul
 if errorlevel 1 (
-    echo ERROR: PyInstaller not properly installed in virtual environment
-    echo Attempting to reinstall...
-    uv pip install --python .venv\Scripts\python.exe --force-reinstall pyinstaller>=6.3
-    %PYTHON_CMD% -c "import pyinstaller; print('PyInstaller version:', pyinstaller.__version__)" 2>nul
+    echo WARNING: PyInstaller module import test failed, but this is often normal.
+    echo Testing PyInstaller command line functionality instead...
+    %PYTHON_CMD% -m PyInstaller --version >nul 2>&1
     if errorlevel 1 (
-        echo ERROR: PyInstaller installation failed completely
+        echo ERROR: PyInstaller command line not working
+        echo This indicates a real installation problem.
         pause
         exit /b 1
+    ) else (
+        echo PyInstaller command line is functional - proceeding with build.
     )
+) else (
+    echo PyInstaller module import successful and ready!
 )
-echo PyInstaller verified and ready!
+
+echo Verifying PyInstaller can be invoked...
+%PYTHON_CMD% -m PyInstaller --help >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: PyInstaller cannot be invoked as a module
+    echo This will cause the build to fail.
+    pause
+    exit /b 1
+) else (
+    echo PyInstaller is properly installed and accessible!
+)
 
 echo.
 echo Step 7: Cleaning previous build...

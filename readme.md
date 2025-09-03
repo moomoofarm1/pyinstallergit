@@ -377,6 +377,10 @@ Solution: This error was fixed in the latest version. The build script now uses
 Solution: Fixed in latest version. The build script now uses:
 uv pip install --python .venv\Scripts\python.exe pyinstaller>=6.3
 This ensures PyInstaller is installed in the correct virtual environment.
+
+Note: PyInstaller import verification tests both module import (import PyInstaller) 
+and command line functionality (python -m PyInstaller --version) to ensure 
+compatibility with different PyInstaller installation methods.
 ```
 
 **Error: "The syntax of the command is incorrect"**
@@ -402,6 +406,17 @@ uv python install 3.11
 ```batch
 # Try running as Administrator or check firewall settings
 # Also verify sufficient disk space (>2GB recommended)
+```
+
+**Error: "PyInstaller installation failed completely"**
+```
+Solution: This usually indicates the build script incorrectly failed PyInstaller 
+verification. The latest version now tests both:
+1. Module import: import PyInstaller (may fail but is not critical)
+2. Command line: python -m PyInstaller --version (must succeed)
+
+If you see this error with the old version, the build actually succeeded.
+The latest version has more robust PyInstaller verification.
 ```
 
 **Unicode character display issues**

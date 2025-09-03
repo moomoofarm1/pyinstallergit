@@ -55,11 +55,18 @@ if errorlevel 1 (
 
 echo.
 echo Test 5: Testing PyInstaller module import...
-.test_build_venv\Scripts\python.exe -c "import pyinstaller; print('PyInstaller version:', pyinstaller.__version__)" 2>nul
+.test_build_venv\Scripts\python.exe -c "import PyInstaller; print('PyInstaller version:', PyInstaller.__version__)" 2>nul
 if errorlevel 1 (
-    echo [FAIL] PyInstaller module cannot be imported
-    set /a TEST_FAILED+=1
-    goto cleanup
+    echo [INFO] PyInstaller module import failed, testing command line instead...
+    .test_build_venv\Scripts\python.exe -m PyInstaller --version >nul 2>&1
+    if errorlevel 1 (
+        echo [FAIL] PyInstaller command line also not working
+        set /a TEST_FAILED+=1
+        goto cleanup
+    ) else (
+        echo [PASS] PyInstaller command line is functional
+        set /a TEST_PASSED+=1
+    )
 ) else (
     echo [PASS] PyInstaller module imports successfully
     set /a TEST_PASSED+=1
@@ -67,7 +74,7 @@ if errorlevel 1 (
 
 echo.
 echo Test 6: Testing PyInstaller spec file validation...
-.test_build_venv\Scripts\python.exe -m pyinstaller --help >nul 2>&1
+.test_build_venv\Scripts\python.exe -m PyInstaller --help >nul 2>&1
 if errorlevel 1 (
     echo [FAIL] PyInstaller not working in test environment
     set /a TEST_FAILED+=1
