@@ -39,7 +39,7 @@ project_root/
 ├── configs/              # Virtual environment configurations
 │   ├── diarization_env.txt     # Diarization dependencies
 │   └── transcription_env.txt   # Transcription dependencies
-└── .venvs/               # Virtual environments (created at runtime)
+└── <temp>/alf_venvs/     # Virtual environments (created at runtime)
     ├── diarization/      # pyannote.audio environment
     └── transcription/    # NeMo ASR environment
 ```
@@ -145,12 +145,12 @@ Use the GUI "Setup All Environments" button which automatically:
 ### Manual Setup
 ```bash
 # Create diarization environment
-uv venv .venvs/diarization --python 3.9
-.venvs/diarization/bin/pip install -r configs/diarization_env.txt
+uv venv <temp>/alf_venvs/diarization --python 3.9
+<temp>/alf_venvs/diarization/bin/pip install -r configs/diarization_env.txt
 
 # Create transcription environment (when ready)
-uv venv .venvs/transcription --python 3.9
-.venvs/transcription/bin/pip install -r configs/transcription_env.txt
+uv venv <temp>/alf_venvs/transcription --python 3.9
+<temp>/alf_venvs/transcription/bin/pip install -r configs/transcription_env.txt
 ```
 
 ## Advanced Usage

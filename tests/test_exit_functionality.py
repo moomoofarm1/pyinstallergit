@@ -8,6 +8,7 @@ virtual environments and temporary files.
 import pytest
 import tempfile
 import shutil
+import os
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -22,16 +23,22 @@ class TestExitFunctionality:
         self.temp_dir = Path(tempfile.mkdtemp())
         
         # Create mock virtual environments for testing
-        self.mock_venvs_dir = self.temp_dir / ".venvs"
+        self.mock_venvs_dir = self.temp_dir / "venvs"
         self.mock_venvs_dir.mkdir()
         
         self.mock_diarization_env = self.mock_venvs_dir / "diarization"
         self.mock_diarization_env.mkdir()
         (self.mock_diarization_env / "pyvenv.cfg").write_text("test config")
-        
+        bin_dir = "Scripts" if os.name == "nt" else "bin"
+        py_name = "python.exe" if os.name == "nt" else "python"
+        (self.mock_diarization_env / bin_dir).mkdir()
+        (self.mock_diarization_env / bin_dir / py_name).touch()
+
         self.mock_transcription_env = self.mock_venvs_dir / "transcription"
         self.mock_transcription_env.mkdir()
         (self.mock_transcription_env / "pyvenv.cfg").write_text("test config")
+        (self.mock_transcription_env / bin_dir).mkdir()
+        (self.mock_transcription_env / bin_dir / py_name).touch()
     
     def teardown_method(self):
         """Clean up test fixtures."""
@@ -126,6 +133,9 @@ class TestExitFunctionality:
             app.server_manager.venv_dir = self.mock_venvs_dir
             app.server_manager.diarization_venv = self.mock_diarization_env
             app.server_manager.transcription_venv = self.mock_transcription_env
+            app.show_progress = MagicMock()
+            app.hide_progress = MagicMock()
+            app.update_status = MagicMock()
             
             # Mock the cleanup methods
             with patch.object(app.server_manager, 'cleanup_all_and_exit') as mock_cleanup_exit, \
