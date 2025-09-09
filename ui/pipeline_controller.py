@@ -323,26 +323,27 @@ SPEAKER {audio_stem} 1 9.700 2.800 <NA> <NA> speaker_01 <NA> <NA>""".format(
         configured for speaker diarization annotation and verification.
         """
         try:
-            # For now, open a placeholder URL
-            # In the actual implementation, this would be the Label Studio instance
-            # configured with the diarization project template
-            
-            diarization_url = "http://localhost:8080/projects/diarization"
+            # Label Studio should be automatically running when diarization server starts
+            diarization_url = "http://localhost:8080"
             
             logger.info(f"Opening diarization browser: {diarization_url}")
             
             # Check if we can reach the URL first
             import requests
             try:
-                response = requests.get("http://localhost:8080", timeout=2)
+                response = requests.get(diarization_url, timeout=5)
                 if response.status_code == 200:
                     webbrowser.open(diarization_url)
+                    logger.info("Label Studio diarization browser opened successfully")
                 else:
-                    # Label Studio not running, open setup page
-                    self._open_label_studio_setup("diarization")
-            except requests.RequestException:
-                # Label Studio not available, show setup instructions
-                self._open_label_studio_setup("diarization")
+                    # Label Studio not responding properly
+                    logger.warning(f"Label Studio responded with status code: {response.status_code}")
+                    webbrowser.open(diarization_url)  # Try opening anyway
+            except requests.RequestException as e:
+                # Label Studio not available, try opening anyway or show message
+                logger.warning(f"Cannot reach Label Studio at {diarization_url}: {e}")
+                logger.info("Attempting to open browser anyway - Label Studio may still be starting up")
+                webbrowser.open(diarization_url)
                 
         except Exception as e:
             logger.error(f"Failed to open diarization browser: {e}")

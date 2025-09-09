@@ -47,7 +47,7 @@ def test_environment_created_on_start(tmp_path, server_type, venv_attr, setup_me
         mock_setup_env.side_effect = create_dummy_env
 
         if server_type == ServerType.DIARIZATION:
-            assert sm.start_diarization_server()
+            assert sm.start_diarization_server(with_label_studio=False)
         else:
             assert sm.start_transcription_server()
 

@@ -326,15 +326,21 @@ class AudioProcessingApp:
         threading.Thread(target=preprocess_task, daemon=True).start()
     
     def start_diarization_server(self):
-        """Start the diarization server."""
+        """Start the diarization server with Label Studio."""
         def start_server():
             try:
-                self.server_manager.start_diarization_server()
+                # Start both diarization and Label Studio servers
+                self.server_manager.start_diarization_server(with_label_studio=True)
                 self.root.after(0, lambda: self.diarization_status_var.set(
-                    "Server: Running | Browser: Not opened"
+                    "Server: Running | Label Studio: Starting..."
                 ))
                 self.root.after(0, lambda: self.diarization_start_btn.config(state=tk.DISABLED))
                 self.root.after(0, lambda: self.diarization_stop_btn.config(state=tk.NORMAL))
+                
+                # Update status to show both servers are ready
+                self.root.after(2000, lambda: self.diarization_status_var.set(
+                    "Server: Running | Label Studio: Ready"
+                ))
             except Exception as e:
                 logger.error(f"Failed to start diarization server: {e}")
                 self.root.after(0, lambda: messagebox.showerror(
@@ -344,15 +350,24 @@ class AudioProcessingApp:
         threading.Thread(target=start_server, daemon=True).start()
 
     def stop_diarization_server(self):
-        """Stop the diarization server."""
-        try:
-            self.server_manager.stop_diarization_server()
-            self.diarization_status_var.set("Server: Stopped | Browser: Not opened")
-            self.diarization_start_btn.config(state=tk.NORMAL)
-            self.diarization_stop_btn.config(state=tk.DISABLED)
-        except Exception as e:
-            logger.error(f"Failed to stop diarization server: {e}")
-            messagebox.showerror("Error", f"Failed to stop server: {e}")
+        """Stop the diarization server and clean up virtual environment."""
+        def stop_server():
+            try:
+                # Stop servers and clean up virtual environment
+                self.server_manager.stop_diarization_server(cleanup_venv=True)
+                self.root.after(0, lambda: self.diarization_status_var.set(
+                    "Server: Stopped | Environment: Cleaned up"
+                ))
+                self.root.after(0, lambda: self.diarization_start_btn.config(state=tk.NORMAL))
+                self.root.after(0, lambda: self.diarization_stop_btn.config(state=tk.DISABLED))
+                logger.info("Diarization server stopped and environment cleaned up")
+            except Exception as e:
+                logger.error(f"Failed to stop diarization server: {e}")
+                self.root.after(0, lambda: messagebox.showerror(
+                    "Error", f"Failed to stop server: {e}"
+                ))
+
+        threading.Thread(target=stop_server, daemon=True).start()
 
     def start_transcription_server(self):
         """Start the transcription server."""
