@@ -17,7 +17,7 @@ from communication.server_manager import ServerManager, ServerType
 def test_environment_created_on_start(tmp_path, server_type, venv_attr, setup_method):
     sm = ServerManager()
     # Redirect venv paths to temporary directory
-    sm.venv_dir = tmp_path / ".venvs"
+    sm.venv_dir = tmp_path / "venvs"
     setattr(sm, venv_attr, sm.venv_dir / server_type.value)
 
     # Create dummy server script location

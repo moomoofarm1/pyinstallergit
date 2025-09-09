@@ -48,7 +48,7 @@ project_root/
 │   └── pipeline_controller.py # Workflow coordination
 ├── tests/                 # Unit and integration tests
 ├── configs/              # Environment configurations
-└── .venvs/              # Virtual environments (created by uv)
+└── <temp>/alf_venvs/    # Virtual environments (created by uv)
 ```
 
 ## Development Commands
@@ -56,8 +56,8 @@ project_root/
 ### Environment Setup
 ```bash
 # Setup virtual environments for different pipelines
-uv venv .venvs/diarization --python 3.9
-uv venv .venvs/transcription --python 3.9
+uv venv <temp>/alf_venvs/diarization --python 3.9
+uv venv <temp>/alf_venvs/transcription --python 3.9
 
 # Install dependencies (handled by server manager)
 # Dependencies listed in configs/diarization_env.txt and configs/transcription_env.txt
@@ -71,10 +71,10 @@ python main.py           # Start the unified GUI controller
 ### Manual Server Commands
 ```bash
 # Diarization server (runs in separate venv)
-cd diarization && ../venvs/diarization/bin/python server.py
+cd diarization && <temp>/alf_venvs/diarization/bin/python server.py
 
-# Transcription server (runs in separate venv)  
-cd transcription && ../venvs/transcription/bin/python server.py
+# Transcription server (runs in separate venv)
+cd transcription && <temp>/alf_venvs/transcription/bin/python server.py
 ```
 
 ### Testing
@@ -115,12 +115,12 @@ pytest tests/ -v
 - `soundfile`: Audio I/O
 - `pydub`: Audio format conversion
 
-### Diarization Environment (.venvs/diarization)
+### Diarization Environment (<temp>/alf_venvs/diarization)
 - `pyannote.audio>=3.0.0`: Speaker diarization
 - `torch>=2.0.0`: Deep learning backend
 - `scipy`: Signal processing
 
-### Transcription Environment (.venvs/transcription)  
+### Transcription Environment (<temp>/alf_venvs/transcription)
 - `nemo-toolkit[asr]>=1.20.0`: Speech recognition
 - `label-studio-ml>=1.0.9`: ML backend integration
 - `omegaconf`: Configuration management

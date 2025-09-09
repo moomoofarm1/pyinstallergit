@@ -533,7 +533,7 @@ class AudioProcessingApp:
             "Do you want to exit and remove all virtual environments?\n\n"
             "This will:\n"
             "• Stop all running servers\n"
-            "• Delete all virtual environments (.venvs directory)\n"
+            "• Delete all virtual environments (temporary directory)\n"
             "• Clean up temporary files\n"
             "• Close the application\n\n"
             "Click 'Yes' to exit with full cleanup\n"

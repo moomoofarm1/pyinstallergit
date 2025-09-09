@@ -18,6 +18,7 @@ import signal
 import time
 import logging
 import shutil
+import tempfile
 try:
     import psutil  # type: ignore
 except ImportError:  # pragma: no cover - optional dependency
@@ -113,8 +114,8 @@ class ServerManager:
             )
         }
         
-        # Virtual environment paths
-        self.venv_dir = Path(".venvs")
+        # Virtual environment paths (use system temporary directory)
+        self.venv_dir = Path(tempfile.gettempdir()) / "alf_venvs"
         self.diarization_venv = self.venv_dir / "diarization"
         self.transcription_venv = self.venv_dir / "transcription"
 
@@ -136,7 +137,7 @@ class ServerManager:
         logger.info("Setting up virtual environments...")
         
         try:
-            # Create .venvs directory
+            # Create base temporary venv directory
             self.venv_dir.mkdir(exist_ok=True)
 
             # Setup diarization environment
@@ -205,7 +206,7 @@ class ServerManager:
                 raise RuntimeError(f"Failed to create diarization venv: {result.stderr}")
             
             # Install diarization dependencies using uv (faster than pip)
-            python_path = Path(self.diarization_venv) / ("Scripts/python" if os.name == 'nt' else "bin/python")
+            python_path = Path(self.diarization_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
             
             # Base dependencies for diarization
             base_deps = [
@@ -286,7 +287,7 @@ class ServerManager:
                 raise RuntimeError(f"Failed to create transcription venv: {result.stderr}")
             
             # Install transcription dependencies using uv (faster than pip)
-            python_path = Path(self.transcription_venv) / ("Scripts/python" if os.name == 'nt' else "bin/python")
+            python_path = Path(self.transcription_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
             
             # Use uv to install dependencies in the venv
             deps_file = Path("configs/transcription_env.txt")
@@ -345,7 +346,7 @@ class ServerManager:
         
         # Check diarization environment
         if Path(self.diarization_venv).exists():
-            python_path = Path(self.diarization_venv) / ("Scripts/python" if os.name == 'nt' else "bin/python")
+            python_path = Path(self.diarization_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
             if python_path.exists():
                 status_parts.append("✓ Diarization env: Ready")
             else:
@@ -355,7 +356,7 @@ class ServerManager:
         
         # Check transcription environment
         if Path(self.transcription_venv).exists():
-            python_path = Path(self.transcription_venv) / ("Scripts/python" if os.name == 'nt' else "bin/python")
+            python_path = Path(self.transcription_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
             if python_path.exists():
                 status_parts.append("✓ Transcription env: Ready")
             else:
@@ -405,7 +406,7 @@ class ServerManager:
             )
             
             # Use python from diarization venv since Label Studio is installed there
-            python_path = Path(self.diarization_venv) / ("Scripts/python" if os.name == 'nt' else "bin/python")
+            python_path = Path(self.diarization_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
             
             if not python_path.exists():
                 raise FileNotFoundError(f"Python not found in diarization environment: {python_path}")
@@ -583,11 +584,11 @@ class ServerManager:
             # Label Studio uses diarization venv but different command structure
             venv = Path(self.diarization_venv)
             # Label Studio doesn't use a script file, handled separately
-            return str(venv / ("Scripts/python" if os.name == 'nt' else "bin/python")), ""
+            return str(venv / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")), ""
         else:
             raise ValueError(f"Unknown server type: {server_type}")
         
-        python_path = venv / ("Scripts/python" if os.name == 'nt' else "bin/python")
+        python_path = venv / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
         
         if not python_path.exists():
             raise FileNotFoundError(f"Python not found in virtual environment: {python_path}")
@@ -857,7 +858,7 @@ class ServerManager:
         """
         Remove all virtual environments created by ALF.
         
-        This method safely removes the .venvs directory and all
+        This method safely removes the temporary venv directory and all
         virtual environments within it.
         """
         try:
@@ -866,7 +867,7 @@ class ServerManager:
             if self.venv_dir.exists():
                 logger.info(f"Removing virtual environments directory: {self.venv_dir}")
                 
-                # Remove the entire .venvs directory
+                # Remove the entire venv directory
                 shutil.rmtree(str(self.venv_dir))
                 
                 logger.info("Virtual environments removed successfully")
@@ -894,13 +895,13 @@ class ServerManager:
                     except Exception as e:
                         logger.error(f"Failed to remove {env_path.name}: {e}")
             
-            # Try to remove the parent .venvs directory if it's empty
+            # Try to remove the parent venv directory if it's empty
             try:
                 if self.venv_dir.exists() and not any(self.venv_dir.iterdir()):
                     self.venv_dir.rmdir()
-                    logger.info("Removed empty .venvs directory")
+                    logger.info("Removed empty venv directory")
             except Exception as e:
-                logger.warning(f"Could not remove .venvs directory: {e}")
+                logger.warning(f"Could not remove venv directory: {e}")
                 
         except Exception as e:
             logger.error(f"Failed to remove individual environments: {e}")
