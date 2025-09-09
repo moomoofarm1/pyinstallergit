@@ -11,6 +11,9 @@ from typing import Union, List, Dict, Tuple, Optional
 import logging
 import json
 from datetime import datetime
+import numpy as np
+import shutil
+import soundfile as sf
 
 logger = logging.getLogger(__name__)
 
@@ -133,9 +136,8 @@ class AudioUtils:
             Optional[float]: Duration in seconds, None if error
         """
         try:
-            _load_dependencies()
-            duration = librosa.get_duration(path=str(file_path))
-            return duration
+            data, sr = sf.read(str(file_path))
+            return data.shape[0] / sr
         except Exception as e:
             logger.error(f"Could not get duration for {file_path}: {e}")
             return None
@@ -372,8 +374,6 @@ class AudioUtils:
             bool: True if sufficient space is available
         """
         try:
-            import shutil
-            
             free_bytes = shutil.disk_usage(directory).free
             free_mb = free_bytes / (1024 * 1024)
             

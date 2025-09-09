@@ -17,6 +17,7 @@ from typing import Union, Optional
 import logging
 
 logger = logging.getLogger(__name__)
+AudioSegment = None  # type: ignore
 
 class AudioPreprocessor:
     """
@@ -51,21 +52,17 @@ class AudioPreprocessor:
         if self._deps_loaded:
             return
         try:
-            import librosa  # type: ignore
-            import soundfile as sf  # type: ignore
-            from pydub import AudioSegment  # type: ignore
             import numpy as np  # type: ignore
+            import soundfile as sf  # type: ignore
         except ImportError as e:
             raise RuntimeError(
                 "Required audio processing packages are missing. "
                 "Please run 'Setup All Environments' to install dependencies."
             ) from e
 
-        # Store references to loaded modules
-        self.librosa = librosa
-        self.sf = sf
-        self.AudioSegment = AudioSegment
         self.np = np
+        self.sf = sf
+        self.AudioSegment = AudioSegment  # type: ignore
         self._deps_loaded = True
     
     def preprocess_mp3_to_mono_16k(self, input_path: Union[str, Path]) -> str:
@@ -92,7 +89,6 @@ class AudioPreprocessor:
         """
         self._load_dependencies()
 
-        librosa = self.librosa
         sf = self.sf
         AudioSegment = self.AudioSegment
         np = self.np
@@ -115,33 +111,32 @@ class AudioPreprocessor:
             
             # Method 1: Use pydub for initial conversion (handles MP3 better)
             if input_path.suffix.lower() == '.mp3':
+                if AudioSegment is None:
+                    raise RuntimeError("audio format not supported: mp3 requires pydub")
                 audio_segment = AudioSegment.from_mp3(str(input_path))
-                
-                # Convert to mono if stereo
+
                 if audio_segment.channels > 1:
                     audio_segment = audio_segment.set_channels(1)
                     logger.info("Converted stereo to mono")
-                
-                # Convert to target sample rate
                 if audio_segment.frame_rate != self.target_sample_rate:
                     audio_segment = audio_segment.set_frame_rate(self.target_sample_rate)
                     logger.info(f"Resampled to {self.target_sample_rate}Hz")
-                
-                # Export as WAV
                 audio_segment.export(str(output_path), format="wav")
                 logger.info(f"Exported to WAV: {output_path.name}")
-                
+
             else:
-                # Method 2: Use librosa for other formats (more precise)
-                audio_data, original_sr = librosa.load(
-                    str(input_path),
-                    sr=self.target_sample_rate,  # Automatically resample
-                    mono=True  # Convert to mono
-                )
-                
-                # Save as WAV file
+                # Load with soundfile and resample if needed
+                audio_data, original_sr = sf.read(str(input_path))
+                if audio_data.ndim > 1:
+                    audio_data = np.mean(audio_data, axis=1)
+                    logger.info("Converted stereo to mono")
+                if original_sr != self.target_sample_rate:
+                    from scipy.signal import resample
+                    num_samples = int(len(audio_data) * self.target_sample_rate / original_sr)
+                    audio_data = resample(audio_data, num_samples)
+                    logger.info(f"Resampled to {self.target_sample_rate}Hz")
                 sf.write(str(output_path), audio_data, self.target_sample_rate)
-                logger.info(f"Processed using librosa: {output_path.name}")
+                logger.info(f"Processed using soundfile: {output_path.name}")
             
             # Post-processing validation and normalization
             self._validate_and_normalize_output(output_path)
@@ -172,27 +167,24 @@ class AudioPreprocessor:
         """
         try:
             self._load_dependencies()
-            librosa = self.librosa
             sf = self.sf
             np = self.np
 
-            # Load and validate the processed file
-            audio_data, sample_rate = librosa.load(str(output_path), sr=None, mono=False)
+            audio_data, sample_rate = sf.read(str(output_path))
             
             # Validate sample rate
             if sample_rate != self.target_sample_rate:
                 logger.warning(f"Sample rate mismatch: expected {self.target_sample_rate}, got {sample_rate}")
             
-            # Validate channels (librosa loads as mono by default, but let's be explicit)
-            if len(audio_data.shape) > 1:
-                logger.warning(f"Expected mono audio, got {audio_data.shape[0]} channels")
+            if audio_data.ndim > 1:
+                logger.warning(f"Expected mono audio, got {audio_data.shape[1]} channels")
             
             # Check for audio quality issues
             if np.max(np.abs(audio_data)) == 0:
                 raise ValueError("Output audio is silent (all zeros)")
             
             # Check for clipping (values at maximum range)
-            clipping_ratio = np.sum(np.abs(audio_data) >= 0.99) / len(audio_data)
+            clipping_ratio = np.sum(np.abs(audio_data) >= 0.99) / audio_data.size
             if clipping_ratio > 0.01:  # More than 1% clipping
                 logger.warning(f"Audio clipping detected: {clipping_ratio*100:.2f}% of samples")
             
@@ -223,15 +215,12 @@ class AudioPreprocessor:
         """
         try:
             self._load_dependencies()
-            librosa = self.librosa
+            sf = self.sf
 
-            # Input file stats
-            input_size = input_path.stat().st_size / (1024 * 1024)  # MB
-
-            # Output file stats
-            output_size = output_path.stat().st_size / (1024 * 1024)  # MB
-            output_data, output_sr = librosa.load(str(output_path), sr=None)
-            duration = len(output_data) / output_sr
+            input_size = input_path.stat().st_size / (1024 * 1024)
+            output_size = output_path.stat().st_size / (1024 * 1024)
+            output_data, output_sr = sf.read(str(output_path))
+            duration = output_data.shape[0] / output_sr
             
             logger.info(f"Processing statistics:")
             logger.info(f"  Input file: {input_path.name} ({input_size:.2f} MB)")
@@ -300,25 +289,21 @@ class AudioPreprocessor:
 
         try:
             self._load_dependencies()
-            librosa = self.librosa
+            sf = self.sf
             np = self.np
 
-            # Load audio metadata
-            audio_data, sample_rate = librosa.load(str(audio_path), sr=None, mono=False)
+            audio_data, sample_rate = sf.read(str(audio_path))
 
-            # Calculate statistics
-            duration = len(audio_data) / sample_rate if len(audio_data.shape) == 1 else len(audio_data[0]) / sample_rate
-            file_size = audio_path.stat().st_size / (1024 * 1024)  # MB
+            duration = audio_data.shape[0] / sample_rate
+            file_size = audio_path.stat().st_size / (1024 * 1024)
 
-            # Handle stereo/mono
-            if len(audio_data.shape) == 1:
+            if audio_data.ndim == 1:
                 channels = 1
-                rms_level = np.sqrt(np.mean(audio_data**2))
-                peak_level = np.max(np.abs(audio_data))
             else:
-                channels = audio_data.shape[0]
-                rms_level = np.sqrt(np.mean(audio_data**2))
-                peak_level = np.max(np.abs(audio_data))
+                channels = audio_data.shape[1]
+
+            rms_level = np.sqrt(np.mean(audio_data**2))
+            peak_level = np.max(np.abs(audio_data))
 
             return {
                 'filename': audio_path.name,
