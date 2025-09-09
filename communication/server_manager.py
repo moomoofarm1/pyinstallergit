@@ -173,21 +173,35 @@ class ServerManager:
                 logger.info(f"Using bundled uv: {bundled_uv}")
                 return bundled_uv
         
-        # Check system PATH
-        uv_cmd = "uv.exe" if os.name == 'nt' else "uv"
-        try:
-            result = subprocess.run(
-                ['where', uv_cmd] if os.name == 'nt' else ['which', uv_cmd],
-                capture_output=True, text=True, shell=(os.name == 'nt')
-            )
-            if result.returncode == 0:
-                uv_path = result.stdout.strip().split('\n')[0]
-                logger.info(f"Using system uv: {uv_path}")
-                return uv_path
-        except Exception as e:
-            logger.error(f"Error finding uv: {e}")
+        # Check common installation locations
+        common_locations = [
+            # User local installation
+            os.path.expanduser("~/.local/bin/uv"),
+            # System PATH
+            "uv"
+        ]
         
-        raise RuntimeError("uv package manager not found. Please install uv or ensure it's bundled with the application.")
+        for location in common_locations:
+            if os.path.isabs(location):
+                # Direct path check
+                if os.path.exists(location) and os.access(location, os.X_OK):
+                    logger.info(f"Using uv from: {location}")
+                    return location
+            else:
+                # Check in PATH
+                try:
+                    result = subprocess.run(
+                        ['where', location] if os.name == 'nt' else ['which', location],
+                        capture_output=True, text=True, shell=(os.name == 'nt')
+                    )
+                    if result.returncode == 0:
+                        uv_path = result.stdout.strip().split('\n')[0]
+                        logger.info(f"Using system uv: {uv_path}")
+                        return uv_path
+                except Exception as e:
+                    logger.debug(f"Error finding uv in PATH: {e}")
+        
+        raise RuntimeError("uv package manager not found. Please install uv with: curl -LsSf https://astral.sh/uv/install.sh | sh")
     
     def _setup_diarization_environment(self, include_label_studio=True):
         """Set up the diarization virtual environment with Label Studio.
@@ -202,14 +216,14 @@ class ServerManager:
             uv_exe = self._get_uv_executable()
             
             # Create environment using uv
-            cmd = [uv_exe, "venv", str(self.diarization_venv), "--python", "3.9"]
+            cmd = [uv_exe, "venv", str(Path(self.diarization_venv)), "--python", "3.9"]
             result = subprocess.run(cmd, capture_output=True, text=True)
             
             if result.returncode != 0:
                 raise RuntimeError(f"Failed to create diarization venv: {result.stderr}")
             
             # Install diarization dependencies using uv (faster than pip)
-            python_path = self.diarization_venv / ("Scripts/python" if os.name == 'nt' else "bin/python")
+            python_path = Path(self.diarization_venv) / ("Scripts/python" if os.name == 'nt' else "bin/python")
             
             # Base dependencies for diarization
             base_deps = [
@@ -245,14 +259,16 @@ class ServerManager:
                     logger.info("Dependencies installed successfully with uv")
             else:
                 logger.info(f"Installing packages including Label Studio...")
-                # Install each dependency using uv
-                for dep in base_deps:
-                    logger.info(f"Installing {dep}...")
-                    cmd = [uv_exe, "pip", "install", "-p", str(python_path), dep]
-                    result = subprocess.run(cmd, capture_output=True, text=True)
-                    if result.returncode != 0:
-                        logger.warning(f"Failed to install {dep} with uv, trying pip: {result.stderr}")
-                        self._install_deps_with_pip(self.diarization_venv, [dep])
+                # Install all dependencies at once using uv (more efficient)
+                cmd = [uv_exe, "pip", "install", "-p", str(python_path)] + base_deps
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)  # 10 minute timeout
+                
+                if result.returncode != 0:
+                    logger.warning(f"Batch uv installation failed, trying individual pip installs: {result.stderr}")
+                    # Fallback to pip installation one by one
+                    self._install_deps_with_pip(self.diarization_venv, base_deps)
+                else:
+                    logger.info("All dependencies installed successfully with uv")
             
             logger.info("Diarization environment setup completed")
             
@@ -281,14 +297,14 @@ class ServerManager:
             uv_exe = self._get_uv_executable()
             
             # Create environment using uv
-            cmd = [uv_exe, "venv", str(self.transcription_venv), "--python", "3.9"]
+            cmd = [uv_exe, "venv", str(Path(self.transcription_venv)), "--python", "3.9"]
             result = subprocess.run(cmd, capture_output=True, text=True)
             
             if result.returncode != 0:
                 raise RuntimeError(f"Failed to create transcription venv: {result.stderr}")
             
             # Install transcription dependencies using uv (faster than pip)
-            python_path = self.transcription_venv / ("Scripts/python" if os.name == 'nt' else "bin/python")
+            python_path = Path(self.transcription_venv) / ("Scripts/python" if os.name == 'nt' else "bin/python")
             
             # Use uv to install dependencies in the venv
             deps_file = Path("configs/transcription_env.txt")
@@ -346,8 +362,8 @@ class ServerManager:
         status_parts = []
         
         # Check diarization environment
-        if self.diarization_venv.exists():
-            python_path = self.diarization_venv / ("Scripts/python" if os.name == 'nt' else "bin/python")
+        if Path(self.diarization_venv).exists():
+            python_path = Path(self.diarization_venv) / ("Scripts/python" if os.name == 'nt' else "bin/python")
             if python_path.exists():
                 status_parts.append("✓ Diarization env: Ready")
             else:
@@ -356,8 +372,8 @@ class ServerManager:
             status_parts.append("✗ Diarization env: Not found")
         
         # Check transcription environment
-        if self.transcription_venv.exists():
-            python_path = self.transcription_venv / ("Scripts/python" if os.name == 'nt' else "bin/python")
+        if Path(self.transcription_venv).exists():
+            python_path = Path(self.transcription_venv) / ("Scripts/python" if os.name == 'nt' else "bin/python")
             if python_path.exists():
                 status_parts.append("✓ Transcription env: Ready")
             else:
@@ -407,7 +423,7 @@ class ServerManager:
             )
             
             # Use python from diarization venv since Label Studio is installed there
-            python_path = self.diarization_venv / ("Scripts/python" if os.name == 'nt' else "bin/python")
+            python_path = Path(self.diarization_venv) / ("Scripts/python" if os.name == 'nt' else "bin/python")
             
             if not python_path.exists():
                 raise FileNotFoundError(f"Python not found in diarization environment: {python_path}")
@@ -496,10 +512,10 @@ class ServerManager:
             config = self.configs[server_type]
 
             # Automatically create required virtual environment if missing
-            if server_type == ServerType.DIARIZATION and not self.diarization_venv.exists():
+            if server_type == ServerType.DIARIZATION and not Path(self.diarization_venv).exists():
                 logger.info("Diarization environment not found. Creating with uv...")
                 self._setup_diarization_environment()
-            elif server_type == ServerType.TRANSCRIPTION and not self.transcription_venv.exists():
+            elif server_type == ServerType.TRANSCRIPTION and not Path(self.transcription_venv).exists():
                 logger.info("Transcription environment not found. Creating with uv...")
                 self._setup_transcription_environment()
             
@@ -574,16 +590,16 @@ class ServerManager:
             Tuple[str, str]: Python path and server script path
         """
         if server_type == ServerType.DIARIZATION:
-            venv = self.diarization_venv
+            venv = Path(self.diarization_venv)
             script = "server.py"
             script_path = Path(server_type.value) / script
         elif server_type == ServerType.TRANSCRIPTION:
-            venv = self.transcription_venv  
+            venv = Path(self.transcription_venv)  
             script = "server.py"
             script_path = Path(server_type.value) / script
         elif server_type == ServerType.LABEL_STUDIO:
             # Label Studio uses diarization venv but different command structure
-            venv = self.diarization_venv
+            venv = Path(self.diarization_venv)
             # Label Studio doesn't use a script file, handled separately
             return str(venv / ("Scripts/python" if os.name == 'nt' else "bin/python")), ""
         else:
@@ -687,7 +703,7 @@ class ServerManager:
         try:
             import shutil
             
-            if self.diarization_venv.exists():
+            if Path(self.diarization_venv).exists():
                 logger.info(f"Removing diarization virtual environment: {self.diarization_venv}")
                 shutil.rmtree(str(self.diarization_venv))
                 logger.info("Diarization virtual environment removed successfully")
