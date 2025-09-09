@@ -17,6 +17,7 @@ import subprocess
 import signal
 import time
 import logging
+import shutil
 try:
     import psutil  # type: ignore
 except ImportError:  # pragma: no cover - optional dependency
@@ -165,40 +166,23 @@ class ServerManager:
         """Get the path to uv executable, checking bundled location first."""
         # Check if running from PyInstaller bundle
         if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-            # Running from PyInstaller bundle
             bundled_uv = os.path.join(sys._MEIPASS, 'uv', 'uv.exe' if os.name == 'nt' else 'uv')
             if os.path.exists(bundled_uv):
                 logger.info(f"Using bundled uv: {bundled_uv}")
                 return bundled_uv
-        
-        # Check common installation locations
-        common_locations = [
-            # User local installation
-            os.path.expanduser("~/.local/bin/uv"),
-            # System PATH
-            "uv"
-        ]
-        
-        for location in common_locations:
-            if os.path.isabs(location):
-                # Direct path check
-                if os.path.exists(location) and os.access(location, os.X_OK):
-                    logger.info(f"Using uv from: {location}")
-                    return location
-            else:
-                # Check in PATH
-                try:
-                    result = subprocess.run(
-                        ['where', location] if os.name == 'nt' else ['which', location],
-                        capture_output=True, text=True, shell=(os.name == 'nt')
-                    )
-                    if result.returncode == 0:
-                        uv_path = result.stdout.strip().split('\n')[0]
-                        logger.info(f"Using system uv: {uv_path}")
-                        return uv_path
-                except Exception as e:
-                    logger.debug(f"Error finding uv in PATH: {e}")
-        
+
+        # Check user-local installation first
+        local_uv = os.path.expanduser("~/.local/bin/uv")
+        if os.path.exists(local_uv) and os.access(local_uv, os.X_OK):
+            logger.info(f"Using uv from: {local_uv}")
+            return local_uv
+
+        # Fall back to PATH lookup
+        uv_path = shutil.which("uv")
+        if uv_path:
+            logger.info(f"Using system uv: {uv_path}")
+            return uv_path
+
         raise RuntimeError("uv package manager not found. Please install uv with: curl -LsSf https://astral.sh/uv/install.sh | sh")
     
     def _setup_diarization_environment(self, include_label_studio=True):
@@ -699,15 +683,14 @@ class ServerManager:
     def _cleanup_diarization_environment(self):
         """Clean up the diarization virtual environment."""
         try:
-            import shutil
-            
-            if Path(self.diarization_venv).exists():
-                logger.info(f"Removing diarization virtual environment: {self.diarization_venv}")
-                shutil.rmtree(str(self.diarization_venv))
+            venv_path = Path(self.diarization_venv)
+            if venv_path.exists() and venv_path.is_dir():
+                logger.info(f"Removing diarization virtual environment: {venv_path}")
+                shutil.rmtree(str(venv_path))
                 logger.info("Diarization virtual environment removed successfully")
             else:
                 logger.info("No diarization virtual environment found to remove")
-                
+
         except Exception as e:
             logger.error(f"Failed to remove diarization virtual environment: {e}")
     
