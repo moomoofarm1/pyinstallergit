@@ -153,8 +153,6 @@ class ServerManager:
     def _ensure_runtime_dependencies(self):
         """Ensure optional runtime dependencies are available."""
         missing = []
-        if psutil is None:
-            missing.append("psutil")
         if requests is None:
             missing.append("requests")
         if missing:
