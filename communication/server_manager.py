@@ -96,7 +96,7 @@ class ServerManager:
         self.configs = {
             ServerType.DIARIZATION: ServerConfig(
                 server_type=ServerType.DIARIZATION,
-                port=9091,
+                port=9090,
                 working_directory=Path("diarization"),
                 health_check_endpoint="/health",
                 startup_timeout=120,
@@ -120,6 +120,7 @@ class ServerManager:
         self.venv_dir = Path(tempfile.gettempdir()) / "alf_venvs"
         self.diarization_venv = self.venv_dir / "diarization"
         self.transcription_venv = self.venv_dir / "transcription"
+        self.label_studio_venv = self.venv_dir / "label_studio"
 
         logger.info("ServerManager initialized")
         if psutil is None or requests is None:
@@ -142,10 +143,9 @@ class ServerManager:
             # Create base temporary venv directory
             self.venv_dir.mkdir(exist_ok=True)
 
-            # Setup diarization environment (with Label Studio)
-            self._setup_diarization_environment(include_label_studio=True)
-
-            # Setup transcription environment
+            # Setup environments
+            self._setup_label_studio_environment()
+            self._setup_diarization_backend_environment()
             self._setup_transcription_environment()
 
             logger.info("Virtual environments setup completed")
@@ -188,105 +188,44 @@ class ServerManager:
 
         raise RuntimeError("uv package manager not found. Please install uv with: curl -LsSf https://astral.sh/uv/install.sh | sh")
     
-    def _setup_diarization_environment(self, include_label_studio=True):
-        """Set up the diarization virtual environment with Label Studio.
-        
-        Args:
-            include_label_studio (bool): Whether to include Label Studio installation
-        """
-        logger.info("Setting up diarization environment...")
-        
-        try:
-            # Get uv executable
-            uv_exe = self._get_uv_executable()
-            logger.info(f"Found uv executable at: {uv_exe}")
-            
-            # Create parent directory if it doesn't exist
-            self.venv_dir.mkdir(exist_ok=True)
-            logger.info(f"Created venv directory: {self.venv_dir}")
-            
-            # Create environment using uv
-            cmd = [uv_exe, "venv", str(Path(self.diarization_venv)), "--python", "3.9"]
-            logger.info(f"Creating virtual environment with command: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            
-            if result.returncode != 0:
-                logger.error(f"uv venv creation failed. Return code: {result.returncode}")
-                logger.error(f"stdout: {result.stdout}")
-                logger.error(f"stderr: {result.stderr}")
-                raise RuntimeError(f"Failed to create diarization venv: {result.stderr}")
-            else:
-                logger.info(f"Successfully created virtual environment at: {self.diarization_venv}")
-                logger.info(f"uv output: {result.stdout}")
-            
-            # Install diarization dependencies using uv (faster than pip)
-            python_path = Path(self.diarization_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
-            
-            # Base dependencies for diarization
-            base_deps = [
-                "fastapi[standard]>=0.100.0",
-                "uvicorn>=0.23.0", 
-                "pyannote.audio>=3.0.0",
-                "pyannote.core>=5.0.0",
-                "torch>=2.0.0",
-                "torchaudio>=2.0.0",
-                "librosa>=0.10.0",
-                "soundfile>=0.12.0",
-                "requests>=2.31.0",
-                "pydantic>=2.0.0"
-            ]
-            
-            # Add Label Studio if requested
-            if include_label_studio:
-                logger.info("Including Label Studio for diarization annotation...")
-                base_deps.append("label-studio>=1.10.0")
-                base_deps.append("label-studio-sdk>=0.0.32")
-            
-            # Use uv to install dependencies in the venv
-            deps_file = Path("configs/diarization_env.txt")
-            if deps_file.exists() and not include_label_studio:
-                cmd = [uv_exe, "pip", "install", "-p", str(python_path), "-r", str(deps_file)]
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                
-                if result.returncode != 0:
-                    logger.warning(f"uv installation failed, falling back to pip: {result.stderr}")
-                    # Fallback to pip installation
-                    self._install_deps_with_pip(self.diarization_venv, base_deps)
-                else:
-                    logger.info("Dependencies installed successfully with uv")
-            else:
-                if include_label_studio:
-                    logger.info("Installing diarization packages including Label Studio...")
-                else:
-                    logger.info("Installing diarization packages (without Label Studio)...")
-                # Install all dependencies at once using uv (more efficient)
-                cmd = [uv_exe, "pip", "install", "-p", str(python_path)] + base_deps
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)  # 10 minute timeout
-                
-                if result.returncode != 0:
-                    logger.warning(f"Batch uv installation failed, trying individual pip installs: {result.stderr}")
-                    # Fallback to pip installation one by one
-                    self._install_deps_with_pip(self.diarization_venv, base_deps)
-                else:
-                    logger.info("All dependencies installed successfully with uv")
-            
-            logger.info("Diarization environment setup completed")
-            
-        except Exception as e:
-            logger.error(f"Diarization environment setup failed: {e}")
-            raise
-    
+    def _setup_label_studio_environment(self):
+        """Create a Python 3.11 environment with Label Studio installed."""
+        logger.info("Setting up Label Studio environment...")
+        uv_exe = self._get_uv_executable()
+
+        cmd = [uv_exe, "venv", str(self.label_studio_venv), "--python", "3.11"]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"Failed to create Label Studio venv: {result.stderr}")
+
+        python_path = self.label_studio_venv / ("Scripts/python" if os.name == "nt" else "bin/python")
+        cmd = [uv_exe, "pip", "install", "-p", str(python_path), "label-studio>=1.10.0"]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"Failed to install Label Studio: {result.stderr}")
+
+        logger.info("Label Studio environment setup completed")
+
+    def _setup_diarization_backend_environment(self):
+        """Create a minimal Python 3.11 environment for the diarization backend."""
+        logger.info("Setting up diarization backend environment...")
+        uv_exe = self._get_uv_executable()
+
+        cmd = [uv_exe, "venv", str(self.diarization_venv), "--python", "3.11"]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"Failed to create diarization backend venv: {result.stderr}")
+
+        logger.info("Diarization backend environment setup completed")
+
     def _install_deps_with_pip(self, venv_path: Path, dependencies: list):
-        """Install dependencies using pip as fallback."""
+        """Fallback installer using pip inside a virtual environment."""
         pip_path = venv_path / ("Scripts/pip" if os.name == 'nt' else "bin/pip")
-        
         for dep in dependencies:
             cmd = [str(pip_path), "install", dep]
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode != 0:
                 logger.warning(f"Failed to install {dep}: {result.stderr}")
-            else:
-                logger.debug(f"Successfully installed: {dep}")
     
     def _setup_transcription_environment(self):
         """Set up the transcription virtual environment."""
@@ -360,8 +299,8 @@ class ServerManager:
             str: Status message describing environment state
         """
         status_parts = []
-        
-        # Check diarization environment
+
+        # Check diarization backend environment
         if Path(self.diarization_venv).exists():
             python_path = Path(self.diarization_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
             if python_path.exists():
@@ -370,6 +309,16 @@ class ServerManager:
                 status_parts.append("⚠ Diarization env: Incomplete")
         else:
             status_parts.append("✗ Diarization env: Not found")
+
+        # Check Label Studio environment
+        if Path(self.label_studio_venv).exists():
+            python_path = Path(self.label_studio_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
+            if python_path.exists():
+                status_parts.append("✓ Label Studio env: Ready")
+            else:
+                status_parts.append("⚠ Label Studio env: Incomplete")
+        else:
+            status_parts.append("✗ Label Studio env: Not found")
         
         
         # Check transcription environment
@@ -393,33 +342,25 @@ class ServerManager:
         """
         info = {
             "venv_base_dir": str(self.venv_dir),
+            "label_studio_venv_path": str(self.label_studio_venv),
             "diarization_venv_path": str(self.diarization_venv),
             "venv_base_exists": self.venv_dir.exists(),
+            "label_studio_venv_exists": Path(self.label_studio_venv).exists(),
             "diarization_venv_exists": Path(self.diarization_venv).exists(),
-            "python_path": None,
-            "python_exists": False,
             "label_studio_installed": False,
             "uv_executable": None,
             "uv_available": False
         }
-        
-        # Check if python exists in venv
-        python_path = Path(self.diarization_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
-        info["python_path"] = str(python_path)
-        info["python_exists"] = python_path.exists()
-        
-        # Check if Label Studio is installed (in diarization environment)
-        if info["python_exists"]:
+
+        # Check Label Studio installation
+        ls_python = Path(self.label_studio_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
+        if ls_python.exists():
             try:
-                import subprocess
-                result = subprocess.run([str(python_path), "-c", "import label_studio; print('installed')"], 
-                                      capture_output=True, text=True, timeout=5)
+                result = subprocess.run([str(ls_python), "-c", "import label_studio"], capture_output=True, text=True)
                 info["label_studio_installed"] = (result.returncode == 0)
-            except:
+            except Exception:
                 info["label_studio_installed"] = False
-        else:
-            info["label_studio_installed"] = False
-        
+
         # Check uv availability
         try:
             uv_exe = self._get_uv_executable()
@@ -427,7 +368,7 @@ class ServerManager:
             info["uv_available"] = True
         except:
             info["uv_available"] = False
-            
+
         return info
     
     def start_diarization_server(self, with_label_studio=True) -> bool:
@@ -440,19 +381,19 @@ class ServerManager:
         Returns:
             bool: True if server started successfully
         """
+        if with_label_studio and not Path(self.label_studio_venv).exists():
+            logger.info("Label Studio environment not found. Creating with uv...")
+            self._setup_label_studio_environment()
+
+        if with_label_studio and not self._start_label_studio_server():
+            logger.error("Label Studio failed to start")
+            return False
+
         if not Path(self.diarization_venv).exists():
-            logger.info("Diarization environment not found. Creating with uv...")
-            self._setup_diarization_environment()
+            logger.info("Diarization backend environment not found. Creating with uv...")
+            self._setup_diarization_backend_environment()
 
-        success = self._start_server(ServerType.DIARIZATION)
-
-        if success and with_label_studio:
-            # Start Label Studio in the same environment
-            if not self._start_label_studio_server():
-                logger.error("Label Studio failed to start")
-                return False
-
-        return success
+        return self._start_server(ServerType.DIARIZATION)
 
 
     def _start_label_studio_server(self) -> bool:
@@ -476,35 +417,31 @@ class ServerManager:
                 host="127.0.0.1"
             )
             
-            # Use python from Label Studio's own virtual environment
-            python_path = Path(self.diarization_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
-            
-            if not python_path.exists():
-                raise FileNotFoundError(f"Python not found in Label Studio environment: {python_path}")
-            
-            # Create Label Studio project directory
+            # Use label-studio executable from its own virtual environment
+            ls_exec = Path(self.label_studio_venv) / (
+                "Scripts/label-studio" if os.name == 'nt' else "bin/label-studio"
+            )
+            if not ls_exec.exists():
+                raise FileNotFoundError(f"Label Studio executable not found: {ls_exec}")
+
             ls_project_dir = Path("label_studio_projects")
             ls_project_dir.mkdir(exist_ok=True)
-            
-            # Set up environment variables
+
             env = os.environ.copy()
             env['LABEL_STUDIO_PORT'] = '8080'
             env['LABEL_STUDIO_HOST'] = '127.0.0.1'
             env['LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED'] = 'true'
             env['LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT'] = str(Path.cwd())
-            
-            # Start Label Studio
+
             cmd = [
-                str(python_path), "-m", "label_studio",
+                str(ls_exec),
                 "start", "diarization_project",
                 "--host", "127.0.0.1",
                 "--port", "8080",
                 "--data-dir", str(ls_project_dir)
             ]
-            
+
             logger.info(f"Starting Label Studio server with command: {' '.join(cmd)}")
-            logger.info(f"Using Python path: {python_path}")
-            logger.info(f"Working directory: {Path.cwd()}")
             logger.info(f"Label Studio project directory: {ls_project_dir}")
             
             process = subprocess.Popen(

@@ -81,7 +81,10 @@ project_root/
 
 ### Diarization Workflow
 
-1. **Start Diarization Server**: Automatically creates an isolated environment with pyannote.audio using `uv`
+1. **Start Diarization Server**:
+   - `uv` creates a Python 3.11 virtual environment and installs Label Studio
+   - Label Studio launches via the `label-studio` CLI and is available at http://localhost:8080
+   - A second virtual environment is created for the backend server which currently only prints "hello word"
 2. **Process Audio**: Upload preprocessed audio for speaker diarization
 3. **Review Results**: Opens Label Studio browser for manual verification of speaker segments
 4. **Stop Diarization Server**: Use the dedicated stop button when finished
@@ -130,7 +133,7 @@ project_root/
 ## Ports and Services
 
 - **Port 8080**: Label Studio frontend (external dependency)
-- **Port 9091**: Diarization server (pyannote.audio FastAPI)
+- **Port 9090**: Diarization server (pyannote.audio FastAPI)
 - **Port 9092**: Transcription server (NeMo ASR FastAPI - future)
 - **GUI**: Tkinter application (local)
 
@@ -190,7 +193,7 @@ The system gracefully handles missing dependencies with mock implementations, al
    ```
 
 3. **Port Conflicts**
-   - Default ports: 9091 (diarization), 9092 (transcription)
+   - Default ports: 9090 (diarization), 9092 (transcription)
    - Modify `ALF_SERVER_PORT` environment variable if needed
 
 4. **Audio Processing Errors**
