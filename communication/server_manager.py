@@ -459,10 +459,14 @@ class ServerManager:
         info = {
             "venv_base_dir": str(self.venv_dir),
             "diarization_venv_path": str(self.diarization_venv),
+            "labelstudio_venv_path": str(self.labelstudio_venv),
             "venv_base_exists": self.venv_dir.exists(),
             "diarization_venv_exists": Path(self.diarization_venv).exists(),
+            "labelstudio_venv_exists": Path(self.labelstudio_venv).exists(),
             "python_path": None,
             "python_exists": False,
+            "labelstudio_python_path": None,
+            "labelstudio_python_exists": False,
             "label_studio_installed": False,
             "uv_executable": None,
             "uv_available": False
@@ -473,15 +477,22 @@ class ServerManager:
         info["python_path"] = str(python_path)
         info["python_exists"] = python_path.exists()
         
-        # Check if Label Studio is installed
-        if info["python_exists"]:
+        # Check Label Studio environment
+        labelstudio_python_path = Path(self.labelstudio_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
+        info["labelstudio_python_path"] = str(labelstudio_python_path)
+        info["labelstudio_python_exists"] = labelstudio_python_path.exists()
+        
+        # Check if Label Studio is installed (in its own environment)
+        if info["labelstudio_python_exists"]:
             try:
                 import subprocess
-                result = subprocess.run([str(python_path), "-c", "import label_studio; print('installed')"], 
+                result = subprocess.run([str(labelstudio_python_path), "-c", "import label_studio; print('installed')"], 
                                       capture_output=True, text=True, timeout=5)
                 info["label_studio_installed"] = (result.returncode == 0)
             except:
                 info["label_studio_installed"] = False
+        else:
+            info["label_studio_installed"] = False
         
         # Check uv availability
         try:
@@ -658,7 +669,7 @@ class ServerManager:
             # Automatically create required virtual environment if missing
             if server_type == ServerType.DIARIZATION and not Path(self.diarization_venv).exists():
                 logger.info("Diarization environment not found. Creating with uv...")
-                self._setup_diarization_environment()
+                self._setup_diarization_environment(include_label_studio=False)
             elif server_type == ServerType.TRANSCRIPTION and not Path(self.transcription_venv).exists():
                 logger.info("Transcription environment not found. Creating with uv...")
                 self._setup_transcription_environment()

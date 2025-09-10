@@ -629,11 +629,18 @@ class AudioProcessingApp:
             # Format the information for display
             info_lines = []
             info_lines.append(f"Base dir: {env_info['venv_base_dir']}")
-            info_lines.append(f"Venv path: {env_info['diarization_venv_path']}")
-            info_lines.append(f"Base exists: {'✓' if env_info['venv_base_exists'] else '✗'}")
-            info_lines.append(f"Venv exists: {'✓' if env_info['diarization_venv_exists'] else '✗'}")
-            info_lines.append(f"Python exists: {'✓' if env_info['python_exists'] else '✗'}")
-            info_lines.append(f"Label Studio: {'✓' if env_info['label_studio_installed'] else '✗'}")
+            info_lines.append("")
+            info_lines.append("DIARIZATION ENVIRONMENT:")
+            info_lines.append(f"  Venv path: {env_info['diarization_venv_path']}")
+            info_lines.append(f"  Venv exists: {'✓' if env_info['diarization_venv_exists'] else '✗'}")
+            info_lines.append(f"  Python exists: {'✓' if env_info['python_exists'] else '✗'}")
+            info_lines.append("")
+            info_lines.append("LABEL STUDIO ENVIRONMENT:")
+            info_lines.append(f"  Venv path: {env_info['labelstudio_venv_path']}")
+            info_lines.append(f"  Venv exists: {'✓' if env_info['labelstudio_venv_exists'] else '✗'}")
+            info_lines.append(f"  Python exists: {'✓' if env_info['labelstudio_python_exists'] else '✗'}")
+            info_lines.append(f"  Label Studio installed: {'✓' if env_info['label_studio_installed'] else '✗'}")
+            info_lines.append("")
             info_lines.append(f"uv available: {'✓' if env_info['uv_available'] else '✗'}")
             
             if env_info['uv_executable']:
@@ -641,18 +648,26 @@ class AudioProcessingApp:
             
             # Update GUI display
             status = "Environment check completed"
-            if env_info['diarization_venv_exists'] and env_info['python_exists'] and env_info['label_studio_installed']:
-                status += " - ✓ Ready"
-                self.diarization_env_info_var.set("✓ Environment ready for Label Studio")
-            elif env_info['diarization_venv_exists'] and env_info['python_exists']:
-                status += " - ⚠ Missing Label Studio"
-                self.diarization_env_info_var.set("⚠ Virtual env exists but Label Studio not installed")
+            
+            # Check both diarization and Label Studio environments
+            diarization_ready = env_info['diarization_venv_exists'] and env_info['python_exists']
+            labelstudio_ready = env_info['labelstudio_venv_exists'] and env_info['labelstudio_python_exists'] and env_info['label_studio_installed']
+            
+            if diarization_ready and labelstudio_ready:
+                status += " - ✓ Both environments ready"
+                self.diarization_env_info_var.set("✓ Diarization ready | ✓ Label Studio ready")
+            elif diarization_ready and env_info['labelstudio_venv_exists'] and env_info['labelstudio_python_exists']:
+                status += " - ⚠ Label Studio not installed"
+                self.diarization_env_info_var.set("✓ Diarization ready | ⚠ Label Studio missing")
+            elif diarization_ready:
+                status += " - ⚠ Label Studio environment missing"
+                self.diarization_env_info_var.set("✓ Diarization ready | ✗ Label Studio env missing")
             elif env_info['diarization_venv_exists']:
-                status += " - ⚠ Python missing"
-                self.diarization_env_info_var.set("⚠ Virtual env exists but Python missing")
+                status += " - ⚠ Diarization Python missing"
+                self.diarization_env_info_var.set("⚠ Diarization incomplete | ✗ Label Studio unknown")
             else:
-                status += " - ✗ Environment missing"
-                self.diarization_env_info_var.set("✗ Virtual environment not found")
+                status += " - ✗ Environments missing"
+                self.diarization_env_info_var.set("✗ Both environments missing")
             
             # Show detailed info in a popup
             detailed_info = "\n".join(info_lines)
