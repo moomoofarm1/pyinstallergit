@@ -174,22 +174,27 @@ class AudioProcessingApp:
                                  command=self.check_diarization_environment)
         check_env_btn.grid(row=2, column=1, sticky=tk.W)
         
+        # Label Studio standalone controls
+        self.label_studio_standalone_btn = ttk.Button(parent, text="Start Label Studio Only",
+                                                     command=self.start_label_studio_standalone)
+        self.label_studio_standalone_btn.grid(row=3, column=0, pady=(10, 0), sticky=tk.W, padx=(0, 10))
+        
         # Processing controls
         run_diarization_btn = ttk.Button(parent, text="Run Diarization Pipeline",
                                        command=self.run_diarization)
-        run_diarization_btn.grid(row=3, column=0, pady=(10, 0), sticky=tk.W, padx=(0, 10))
+        run_diarization_btn.grid(row=4, column=0, pady=(5, 0), sticky=tk.W, padx=(0, 10))
         
         # Status display
         self.diarization_status_var = tk.StringVar(value="Server: Stopped | Browser: Not opened")
         diarization_status = ttk.Label(parent, textvariable=self.diarization_status_var, 
                                      foreground="red")
-        diarization_status.grid(row=4, column=0, columnspan=2, pady=(10, 0), sticky=tk.W)
+        diarization_status.grid(row=5, column=0, columnspan=2, pady=(10, 0), sticky=tk.W)
         
         # Environment info display
         self.diarization_env_info_var = tk.StringVar(value="Environment: Not checked")
         diarization_env_info = ttk.Label(parent, textvariable=self.diarization_env_info_var,
                                        foreground="blue", font=("Consolas", 8))
-        diarization_env_info.grid(row=5, column=0, columnspan=2, pady=(5, 0), sticky=tk.W)
+        diarization_env_info.grid(row=6, column=0, columnspan=2, pady=(5, 0), sticky=tk.W)
     
     def setup_transcription_controls(self, parent: ttk.Frame):
         """Set up transcription pipeline controls."""
@@ -360,6 +365,30 @@ class AudioProcessingApp:
 
         threading.Thread(target=start_server, daemon=True).start()
 
+    def start_label_studio_standalone(self):
+        """Start Label Studio server independently without diarization server."""
+        def start_server():
+            try:
+                # Start Label Studio only
+                success = self.server_manager.start_label_studio_standalone()
+                if success:
+                    self.root.after(0, lambda: self.diarization_status_var.set(
+                        "Diarization: Stopped | Label Studio: Running"
+                    ))
+                    self.root.after(0, lambda: self.label_studio_standalone_btn.config(state=tk.DISABLED))
+                    logger.info("Label Studio started in standalone mode")
+                else:
+                    self.root.after(0, lambda: messagebox.showerror(
+                        "Error", "Failed to start Label Studio in standalone mode"
+                    ))
+            except Exception as e:
+                logger.error(f"Failed to start Label Studio standalone: {e}")
+                self.root.after(0, lambda: messagebox.showerror(
+                    "Error", f"Failed to start Label Studio: {e}"
+                ))
+
+        threading.Thread(target=start_server, daemon=True).start()
+
     def stop_diarization_server(self):
         """Stop the diarization server and clean up virtual environment."""
         def stop_server():
@@ -371,6 +400,7 @@ class AudioProcessingApp:
                 ))
                 self.root.after(0, lambda: self.diarization_start_btn.config(state=tk.NORMAL))
                 self.root.after(0, lambda: self.diarization_stop_btn.config(state=tk.DISABLED))
+                self.root.after(0, lambda: self.label_studio_standalone_btn.config(state=tk.NORMAL))
                 logger.info("Diarization server stopped and environment cleaned up")
             except Exception as e:
                 logger.error(f"Failed to stop diarization server: {e}")

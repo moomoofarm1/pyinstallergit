@@ -440,6 +440,27 @@ class ServerManager:
         
         return success
 
+    def start_label_studio_standalone(self) -> bool:
+        """
+        Start Label Studio server independently without requiring diarization server.
+        
+        Returns:
+            bool: True if Label Studio started successfully
+        """
+        logger.info("Starting Label Studio server in standalone mode...")
+        
+        # Ensure diarization environment exists (needed for Label Studio installation)
+        if not Path(self.diarization_venv).exists():
+            logger.info("Diarization environment not found. Creating with uv...")
+            try:
+                self._setup_diarization_environment()
+            except Exception as e:
+                logger.error(f"Failed to create diarization environment: {e}")
+                return False
+        
+        # Start Label Studio server
+        return self._start_label_studio_server()
+
     def _start_label_studio_server(self) -> bool:
         """
         Start Label Studio server in the diarization virtual environment.
