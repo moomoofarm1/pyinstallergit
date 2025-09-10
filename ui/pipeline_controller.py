@@ -95,7 +95,9 @@ class PipelineController:
             
             logger.info(f"Diarization pipeline completed for job: {job_id}")
             return result
-            
+
+        except FileNotFoundError:
+            raise
         except Exception as e:
             logger.error(f"Diarization pipeline failed: {e}")
             raise RuntimeError(f"Diarization pipeline error: {e}")
