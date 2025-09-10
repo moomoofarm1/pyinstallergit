@@ -5,4 +5,3 @@ transformers
 torch
 requests
 pathlib
-psutil
