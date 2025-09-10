@@ -331,16 +331,12 @@ SPEAKER {audio_stem} 1 9.700 2.800 <NA> <NA> speaker_01 <NA> <NA>""".format(
         configured for speaker diarization annotation and verification.
         """
         try:
+            # Label Studio should be automatically running when diarization server starts
             diarization_url = "http://localhost:8080"
-
-            # Ensure the Label Studio server is running
-            if not self.server_manager.is_server_running(ServerType.LABEL_STUDIO):
-                logger.info("Label Studio server not running, attempting startup")
-                if not self.server_manager.start_label_studio_server():
-                    raise RuntimeError("Label Studio server failed to start")
-
+            
             logger.info(f"Opening diarization browser: {diarization_url}")
-
+            
+            # Check if we can reach the URL first
             import requests
             try:
                 response = requests.get(diarization_url, timeout=5)
@@ -348,12 +344,15 @@ SPEAKER {audio_stem} 1 9.700 2.800 <NA> <NA> speaker_01 <NA> <NA>""".format(
                     webbrowser.open(diarization_url)
                     logger.info("Label Studio diarization browser opened successfully")
                 else:
+                    # Label Studio not responding properly
                     logger.warning(f"Label Studio responded with status code: {response.status_code}")
-                    webbrowser.open(diarization_url)
+                    webbrowser.open(diarization_url)  # Try opening anyway
             except requests.RequestException as e:
+                # Label Studio not available, try opening anyway or show message
                 logger.warning(f"Cannot reach Label Studio at {diarization_url}: {e}")
+                logger.info("Attempting to open browser anyway - Label Studio may still be starting up")
                 webbrowser.open(diarization_url)
-
+                
         except Exception as e:
             logger.error(f"Failed to open diarization browser: {e}")
             raise RuntimeError(f"Cannot open diarization browser: {e}")
