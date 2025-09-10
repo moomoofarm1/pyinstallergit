@@ -169,6 +169,11 @@ class AudioProcessingApp:
                                                 command=self.open_diarization_browser)
         self.diarization_browser_btn.grid(row=2, column=0, sticky=tk.W, padx=(0, 10))
         
+        # Environment debugging controls
+        check_env_btn = ttk.Button(parent, text="Check Diarization Environment",
+                                 command=self.check_diarization_environment)
+        check_env_btn.grid(row=2, column=1, sticky=tk.W)
+        
         # Processing controls
         run_diarization_btn = ttk.Button(parent, text="Run Diarization Pipeline",
                                        command=self.run_diarization)
@@ -179,6 +184,12 @@ class AudioProcessingApp:
         diarization_status = ttk.Label(parent, textvariable=self.diarization_status_var, 
                                      foreground="red")
         diarization_status.grid(row=4, column=0, columnspan=2, pady=(10, 0), sticky=tk.W)
+        
+        # Environment info display
+        self.diarization_env_info_var = tk.StringVar(value="Environment: Not checked")
+        diarization_env_info = ttk.Label(parent, textvariable=self.diarization_env_info_var,
+                                       foreground="blue", font=("Consolas", 8))
+        diarization_env_info.grid(row=5, column=0, columnspan=2, pady=(5, 0), sticky=tk.W)
     
     def setup_transcription_controls(self, parent: ttk.Frame):
         """Set up transcription pipeline controls."""
@@ -348,6 +359,7 @@ class AudioProcessingApp:
                 ))
 
         threading.Thread(target=start_server, daemon=True).start()
+
 
     def stop_diarization_server(self):
         """Stop the diarization server and clean up virtual environment."""
@@ -579,6 +591,65 @@ class AudioProcessingApp:
                 self.root.after(0, self.hide_progress)
         
         threading.Thread(target=cleanup_task, daemon=True).start()
+    
+    def check_diarization_environment(self):
+        """Check and display detailed diarization environment information."""
+        try:
+            env_info = self.server_manager.get_diarization_environment_info()
+            
+            # Format the information for display
+            info_lines = []
+            info_lines.append(f"Base dir: {env_info['venv_base_dir']}")
+            info_lines.append("")
+            info_lines.append("DIARIZATION ENVIRONMENT:")
+            info_lines.append(f"  Venv path: {env_info['diarization_venv_path']}")
+            info_lines.append(f"  Venv exists: {'✓' if env_info['diarization_venv_exists'] else '✗'}")
+            info_lines.append(f"  Python exists: {'✓' if env_info['python_exists'] else '✗'}")
+            info_lines.append("")
+            info_lines.append("LABEL STUDIO (in diarization env):")
+            info_lines.append(f"  Label Studio installed: {'✓' if env_info['label_studio_installed'] else '✗'}")
+            info_lines.append("")
+            info_lines.append(f"uv available: {'✓' if env_info['uv_available'] else '✗'}")
+            
+            if env_info['uv_executable']:
+                info_lines.append(f"uv path: {env_info['uv_executable']}")
+            
+            # Update GUI display
+            status = "Environment check completed"
+            
+            # Check diarization environment (includes Label Studio)
+            diarization_ready = env_info['diarization_venv_exists'] and env_info['python_exists']
+            labelstudio_ready = env_info['label_studio_installed']
+            
+            if diarization_ready and labelstudio_ready:
+                status += " - ✓ Environment ready with Label Studio"
+                self.diarization_env_info_var.set("✓ Diarization ready | ✓ Label Studio ready")
+            elif diarization_ready and not labelstudio_ready:
+                status += " - ⚠ Label Studio not installed"
+                self.diarization_env_info_var.set("✓ Diarization ready | ⚠ Label Studio missing")
+            elif not diarization_ready:
+                status += " - ⚠ Diarization environment missing"
+                self.diarization_env_info_var.set("✗ Diarization env missing")
+            elif env_info['diarization_venv_exists']:
+                status += " - ⚠ Diarization Python missing"
+                self.diarization_env_info_var.set("⚠ Diarization incomplete | ✗ Label Studio unknown")
+            else:
+                status += " - ✗ Environment missing"
+                self.diarization_env_info_var.set("✗ Environment missing")
+            
+            # Show detailed info in a popup
+            detailed_info = "\n".join(info_lines)
+            messagebox.showinfo("Diarization Environment Check", 
+                              f"Environment Status: {status}\n\n{detailed_info}")
+            
+            logger.info(f"Diarization environment check: {status}")
+            logger.info(f"Environment details: {env_info}")
+            
+        except Exception as e:
+            error_msg = f"Failed to check diarization environment: {e}"
+            logger.error(error_msg)
+            self.diarization_env_info_var.set("✗ Environment check failed")
+            messagebox.showerror("Environment Check Error", error_msg)
     
     def on_closing(self):
         """Handle application closing without virtual environment cleanup."""
