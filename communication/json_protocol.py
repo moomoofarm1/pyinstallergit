@@ -19,6 +19,7 @@ from datetime import datetime
 from enum import Enum
 from dataclasses import dataclass, asdict
 import uuid
+import queue  # Used for thread-safe messaging
 
 logger = logging.getLogger(__name__)
 
