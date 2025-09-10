@@ -483,6 +483,11 @@ class ServerManager:
             # Start Label Studio independently of the diarization backend
             if not self.start_label_studio_server():
                 logger.error("Label Studio failed to start")
+        if success and with_label_studio:
+            # Start Label Studio in the same environment
+            if not self._start_label_studio_server():
+                logger.error("Label Studio failed to start")
+                return False
 
         return success
 
