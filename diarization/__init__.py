@@ -1,6 +1,6 @@
-"""
-Diarization Module
+"""Diarization package.
 
-This module provides speaker diarization capabilities using pyannote.audio
-pipeline and integrates with Label Studio frontend for manual verification.
+The modules in this package implement speaker diarization using
+``pyannote.audio``.  The results can be visualized and corrected via the
+Label Studio interface which the project integrates with.
 """
