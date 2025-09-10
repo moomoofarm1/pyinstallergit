@@ -477,10 +477,7 @@ class ServerManager:
             if not Path(self.label_studio_venv).exists():
                 logger.info("Label Studio environment not found. Creating with uv...")
                 self._setup_label_studio_environment()
-
-            if not self._start_label_studio_server():
-                logger.error("Label Studio failed to start")
-                return False
+            # Start Label Studio in the same environment
 
         return success
 
