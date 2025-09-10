@@ -51,7 +51,7 @@ project_root/
    # Install uv (modern Python package manager)
    pip install uv
    
-   # Install base dependencies (includes psutil for process monitoring)
+   # Install base dependencies
    uv sync
    ```
 
@@ -63,7 +63,6 @@ project_root/
 ### 3. **Set up environments (via GUI):**
    - Starting a server automatically creates its virtual environment using `uv`
    - You can also pre-create them via "Setup All Environments" in the Environment Management tab
-   - This setup also installs `psutil` for process monitoring if it isn't already available
 
 ### 4. **Set Hugging Face token (for pyannote.audio models):**
    ```bash

@@ -195,21 +195,6 @@ class ServerManager:
         logger.info("Setting up diarization environment...")
         
         try:
-            # Ensure psutil exists for host-side process monitoring
-            if psutil is None:  # pragma: no cover - only runs when psutil missing
-                try:
-                    subprocess.run(
-                        [sys.executable, "-m", "pip", "install", "psutil"],
-                        check=True,
-                        capture_output=True,
-                        text=True,
-                    )
-                    import psutil as _psutil  # pylint: disable=import-outside-toplevel
-                    globals()["psutil"] = _psutil
-                    logger.info("psutil installed for process monitoring")
-                except Exception as install_err:  # pragma: no cover - best effort
-                    logger.warning(f"Could not install psutil: {install_err}")
-
             # Get uv executable
             uv_exe = self._get_uv_executable()
             
@@ -608,12 +593,6 @@ class ServerManager:
         if not python_path.exists():
             raise FileNotFoundError(f"Python not found in virtual environment: {python_path}")
         
-        if not script_path.exists():
-            # In PyInstaller builds, modules are unpacked to sys._MEIPASS
-            if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-                bundled = Path(sys._MEIPASS) / script_path
-                if bundled.exists():
-                    script_path = bundled
         if not script_path.exists():
             raise FileNotFoundError(f"Server script not found: {script_path}")
         
