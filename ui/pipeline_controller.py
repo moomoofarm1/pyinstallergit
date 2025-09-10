@@ -72,8 +72,11 @@ class PipelineController:
             # Ensure diarization server is running
             if not self.server_manager.is_diarization_running():
                 logger.info("Starting diarization server...")
-                if not self.server_manager.start_diarization_server():
-                    raise RuntimeError("Failed to start diarization server")
+                try:
+                    if not self.server_manager.start_diarization_server():
+                        raise RuntimeError("server unavailable")
+                except Exception:
+                    raise RuntimeError("server unavailable")
             
             # Create processing request
             job_id = self._generate_job_id("diarization")
@@ -130,8 +133,11 @@ class PipelineController:
             # Ensure transcription server is running
             if not self.server_manager.is_transcription_running():
                 logger.info("Starting transcription server...")
-                if not self.server_manager.start_transcription_server():
-                    raise RuntimeError("Failed to start transcription server")
+                try:
+                    if not self.server_manager.start_transcription_server():
+                        raise RuntimeError("server unavailable")
+                except Exception:
+                    raise RuntimeError("server unavailable")
             
             # Create processing request
             job_id = self._generate_job_id("transcription")
