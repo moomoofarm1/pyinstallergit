@@ -98,7 +98,8 @@ class ServerManager:
                 server_type=ServerType.DIARIZATION,
                 port=9091,
                 working_directory=Path("diarization"),
-                health_check_endpoint="/health"
+                health_check_endpoint="/health",
+                startup_timeout=120,
             ),
             ServerType.TRANSCRIPTION: ServerConfig(
                 server_type=ServerType.TRANSCRIPTION,
@@ -110,7 +111,8 @@ class ServerManager:
                 server_type=ServerType.LABEL_STUDIO,
                 port=8080,
                 working_directory=Path("."),
-                health_check_endpoint="/version"
+                health_check_endpoint="/api/version",
+                startup_timeout=60,
             )
         }
         
@@ -438,12 +440,18 @@ class ServerManager:
         Returns:
             bool: True if server started successfully
         """
+        if not Path(self.diarization_venv).exists():
+            logger.info("Diarization environment not found. Creating with uv...")
+            self._setup_diarization_environment()
+
         success = self._start_server(ServerType.DIARIZATION)
-        
+
         if success and with_label_studio:
             # Start Label Studio in the same environment
-            self._start_label_studio_server()
-        
+            if not self._start_label_studio_server():
+                logger.error("Label Studio failed to start")
+                return False
+
         return success
 
 
@@ -546,10 +554,14 @@ class ServerManager:
     def start_transcription_server(self) -> bool:
         """
         Start the transcription server.
-        
+
         Returns:
             bool: True if server started successfully
         """
+        if not Path(self.transcription_venv).exists():
+            logger.info("Transcription environment not found. Creating with uv...")
+            self._setup_transcription_environment()
+
         return self._start_server(ServerType.TRANSCRIPTION)
     
     def _start_server(self, server_type: ServerType) -> bool:
@@ -569,14 +581,6 @@ class ServerManager:
         try:
             self._ensure_runtime_dependencies()
             config = self.configs[server_type]
-
-            # Automatically create required virtual environment if missing
-            if server_type == ServerType.DIARIZATION and not Path(self.diarization_venv).exists():
-                logger.info("Diarization environment not found. Creating with uv...")
-                self._setup_diarization_environment(include_label_studio=True)
-            elif server_type == ServerType.TRANSCRIPTION and not Path(self.transcription_venv).exists():
-                logger.info("Transcription environment not found. Creating with uv...")
-                self._setup_transcription_environment()
             
             # Update server info
             self.servers[server_type] = ServerInfo(
