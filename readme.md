@@ -51,7 +51,7 @@ project_root/
    # Install uv (modern Python package manager)
    pip install uv
    
-   # Install base dependencies
+   # Install base dependencies (includes psutil for process monitoring)
    uv sync
    ```
 

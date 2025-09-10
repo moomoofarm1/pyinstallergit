@@ -594,6 +594,12 @@ class ServerManager:
             raise FileNotFoundError(f"Python not found in virtual environment: {python_path}")
         
         if not script_path.exists():
+            # In PyInstaller builds, modules are unpacked to sys._MEIPASS
+            if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+                bundled = Path(sys._MEIPASS) / script_path
+                if bundled.exists():
+                    script_path = bundled
+        if not script_path.exists():
             raise FileNotFoundError(f"Server script not found: {script_path}")
         
         return str(python_path), str(script_path)

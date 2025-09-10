@@ -15,6 +15,7 @@ can dynamically install ML frameworks using uv in virtual environments.
 import sys
 import os
 from pathlib import Path
+from PyInstaller.utils.hooks import Tree  # recursive data inclusion
 
 # Build configuration
 APP_NAME = "ALF-AudioProcessing"
@@ -47,6 +48,8 @@ datas = [
     ('readme.md', '.'),
     ('CLAUDE.md', '.'),
 ]
+# Include server scripts for runtime execution (recursive)
+datas += Tree('diarization', prefix='diarization')
 
 # Include uv executable if found
 binaries = []
@@ -83,6 +86,7 @@ hiddenimports = [
     'logging',
     'tempfile',
     'shutil',
+    'psutil',
     
     # Our modules
     'audio_processing',

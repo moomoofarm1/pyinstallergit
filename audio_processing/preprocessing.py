@@ -236,6 +236,9 @@ class AudioPreprocessor:
                         file_extensions: Optional[list] = None) -> list:
         """
         Preprocess multiple audio files in a directory.
+
+        Only files matching the target channel count are processed. Others are
+        skipped to keep the batch clean during testing and usage.
         
         Args:
             input_directory (Union[str, Path]): Directory containing audio files
@@ -262,9 +265,19 @@ class AudioPreprocessor:
         
         logger.info(f"Found {len(audio_files)} audio files to process")
         
-        # Process each file
+        # Load dependencies once for batch operations
+        self._load_dependencies()
+        sf = self.sf
+
+        # Process each file, skipping those with unexpected channel counts
         for audio_file in audio_files:
             try:
+                audio_data, _ = sf.read(str(audio_file))
+                if audio_data.ndim != self.target_channels:
+                    logger.info(
+                        f"Skipping {audio_file.name}: not {self.target_channels} channel(s)"
+                    )
+                    continue
                 processed_path = self.preprocess_mp3_to_mono_16k(audio_file)
                 processed_files.append(processed_path)
                 logger.info(f"Successfully processed: {audio_file.name}")

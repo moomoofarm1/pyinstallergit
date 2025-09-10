@@ -17,6 +17,7 @@ dependencies = [
   "pydub>=0.25.1",
   "scipy>=1.11.0",
   "numpy>=1.24.0",
+  "psutil>=5.9.0",  # process monitoring
   
   # PyInstaller for building
   "pyinstaller>=6.3",
