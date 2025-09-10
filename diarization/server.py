@@ -15,6 +15,7 @@ from pathlib import Path
 import logging
 import tempfile
 import json
+import asyncio
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
@@ -89,31 +90,32 @@ diarization_pipeline: Optional[DiarizationPipeline] = None
 rttm_handler: Optional[RTTMHandler] = None
 server_start_time: float = 0.0
 active_jobs: Dict[str, Dict[str, Any]] = {}
+init_task: Optional[asyncio.Task] = None
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize server components on startup."""
-    global json_protocol, diarization_pipeline, rttm_handler, server_start_time
-    
+    global json_protocol, diarization_pipeline, rttm_handler, server_start_time, init_task
+
     logger.info("Starting ALF Diarization Server...")
     server_start_time = datetime.now().timestamp()
-    
+
     try:
         # Initialize communication protocol
         json_protocol = JsonProtocol()
         logger.info("JSON protocol initialized")
-        
+
         # Initialize RTTM handler
         rttm_handler = RTTMHandler()
         logger.info("RTTM handler initialized")
-        
-        # Initialize diarization pipeline
+
+        # Initialize diarization pipeline in background
         diarization_pipeline = DiarizationPipeline()
-        await diarization_pipeline.initialize()
-        logger.info("Diarization pipeline initialized")
-        
+        init_task = asyncio.create_task(diarization_pipeline.initialize())
+        logger.info("Diarization pipeline initialization started")
+
         logger.info("Diarization server startup completed")
-        
+
     except Exception as e:
         logger.error(f"Server startup failed: {e}")
         sys.exit(1)
@@ -122,7 +124,10 @@ async def startup_event():
 async def shutdown_event():
     """Clean up resources on shutdown."""
     logger.info("Shutting down ALF Diarization Server...")
-    
+
+    if init_task and not init_task.done():
+        await init_task
+
     if diarization_pipeline:
         await diarization_pipeline.cleanup()
     
@@ -137,9 +142,12 @@ async def health_check():
         HealthResponse: Server health status
     """
     uptime = datetime.now().timestamp() - server_start_time
-    
+    status = "initializing"
+    if diarization_pipeline and getattr(diarization_pipeline, "is_initialized", False):
+        status = "healthy"
+
     return HealthResponse(
-        status="healthy",
+        status=status,
         service="diarization",
         version="0.2.0",
         uptime_seconds=uptime
@@ -162,7 +170,11 @@ async def process_diarization(
     """
     if not diarization_pipeline:
         raise HTTPException(status_code=503, detail="Diarization pipeline not initialized")
-    
+
+    if not diarization_pipeline.is_initialized and init_task:
+        logger.info("Waiting for diarization pipeline to finish initialization")
+        await init_task
+
     # Validate input file
     audio_path = Path(request.audio_file_path)
     if not audio_path.exists():
@@ -397,5 +409,5 @@ if __name__ == "__main__":
         host=host,
         port=port,
         reload=False,
-        log_level="info"
+        log_level="info",
     )
