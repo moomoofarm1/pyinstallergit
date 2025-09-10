@@ -377,6 +377,50 @@ class ServerManager:
             status_parts.append("✗ Transcription env: Not found")
         
         return " | ".join(status_parts)
+
+    def get_diarization_environment_info(self) -> dict:
+        """
+        Get detailed information about the diarization environment for debugging.
+        
+        Returns:
+            dict: Detailed environment information
+        """
+        info = {
+            "venv_base_dir": str(self.venv_dir),
+            "diarization_venv_path": str(self.diarization_venv),
+            "venv_base_exists": self.venv_dir.exists(),
+            "diarization_venv_exists": Path(self.diarization_venv).exists(),
+            "python_path": None,
+            "python_exists": False,
+            "label_studio_installed": False,
+            "uv_executable": None,
+            "uv_available": False
+        }
+        
+        # Check if python exists in venv
+        python_path = Path(self.diarization_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
+        info["python_path"] = str(python_path)
+        info["python_exists"] = python_path.exists()
+        
+        # Check if Label Studio is installed
+        if info["python_exists"]:
+            try:
+                import subprocess
+                result = subprocess.run([str(python_path), "-c", "import label_studio; print('installed')"], 
+                                      capture_output=True, text=True, timeout=5)
+                info["label_studio_installed"] = (result.returncode == 0)
+            except:
+                info["label_studio_installed"] = False
+        
+        # Check uv availability
+        try:
+            uv_exe = self._get_uv_executable()
+            info["uv_executable"] = uv_exe
+            info["uv_available"] = True
+        except:
+            info["uv_available"] = False
+            
+        return info
     
     def start_diarization_server(self, with_label_studio=True) -> bool:
         """
