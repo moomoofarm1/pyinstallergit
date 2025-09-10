@@ -195,6 +195,21 @@ class ServerManager:
         logger.info("Setting up diarization environment...")
         
         try:
+            # Ensure psutil exists for host-side process monitoring
+            if psutil is None:  # pragma: no cover - only runs when psutil missing
+                try:
+                    subprocess.run(
+                        [sys.executable, "-m", "pip", "install", "psutil"],
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                    )
+                    import psutil as _psutil  # pylint: disable=import-outside-toplevel
+                    globals()["psutil"] = _psutil
+                    logger.info("psutil installed for process monitoring")
+                except Exception as install_err:  # pragma: no cover - best effort
+                    logger.warning(f"Could not install psutil: {install_err}")
+
             # Get uv executable
             uv_exe = self._get_uv_executable()
             
