@@ -81,11 +81,12 @@ project_root/
 
 ### Diarization Workflow
 
-1. **Start Diarization Server**: Automatically creates an isolated environment with pyannote.audio using `uv`
-2. **Process Audio**: Upload preprocessed audio for speaker diarization
-3. **Review Results**: Opens Label Studio browser for manual verification of speaker segments
-4. **Stop Diarization Server**: Use the dedicated stop button when finished
-5. **Export RTTM**: Generate Rich Transcription Time Marked files for further processing
+1. **Start Diarization Server**: Clicking the button creates a Python 3.11 virtual environment with Label Studio using `uv` and launches it at [http://localhost:8080](http://localhost:8080)
+2. **Backend Startup**: A second environment is created for the diarization server which simply prints "Hello world" and exposes a basic health endpoint
+3. **Process Audio**: Upload preprocessed audio for speaker diarization
+4. **Review Results**: Use the Label Studio interface in your browser
+5. **Stop Diarization Server**: Use the dedicated stop button when finished
+6. **Export RTTM**: Generate Rich Transcription Time Marked files for further processing
 
 ### Transcription Workflow (Framework Ready)
 
@@ -138,18 +139,22 @@ project_root/
 
 ### Automatic Setup (Recommended)
 Use the GUI "Setup All Environments" button which automatically:
-- Creates isolated virtual environments using `uv`
+- Creates isolated Python 3.11 virtual environments using `uv`
 - Installs appropriate dependencies for each pipeline
 - Configures server endpoints and communication
 
 ### Manual Setup
 ```bash
-# Create diarization environment
-uv venv <temp>/alf_venvs/diarization --python 3.9
-<temp>/alf_venvs/diarization/bin/pip install -r configs/diarization_env.txt
+# Create Label Studio environment
+uv venv <temp>/alf_venvs/labelstudio --python 3.11
+<temp>/alf_venvs/labelstudio/bin/pip install label-studio label-studio-sdk
+
+# Create diarization backend environment
+uv venv <temp>/alf_venvs/diarization --python 3.11
+<temp>/alf_venvs/diarization/bin/pip install fastapi[standard] uvicorn
 
 # Create transcription environment (when ready)
-uv venv <temp>/alf_venvs/transcription --python 3.9
+uv venv <temp>/alf_venvs/transcription --python 3.11
 <temp>/alf_venvs/transcription/bin/pip install -r configs/transcription_env.txt
 ```
 
