@@ -253,25 +253,32 @@ class AudioPreprocessor:
             raise ValueError(f"Invalid input directory: {input_dir}")
         
         processed_files = []
-        
+
         # Find all audio files
         audio_files = []
         for ext in file_extensions:
             audio_files.extend(input_dir.glob(f"*{ext}"))
             audio_files.extend(input_dir.glob(f"*{ext.upper()}"))
-        
+
         logger.info(f"Found {len(audio_files)} audio files to process")
-        
+
+        self._load_dependencies()
+        sf = self.sf
+
         # Process each file
         for audio_file in audio_files:
             try:
+                audio_data, _ = sf.read(str(audio_file))
+                if audio_data.ndim != 1:
+                    logger.info(f"Skipping non-mono file: {audio_file.name}")
+                    continue
                 processed_path = self.preprocess_mp3_to_mono_16k(audio_file)
                 processed_files.append(processed_path)
                 logger.info(f"Successfully processed: {audio_file.name}")
             except Exception as e:
                 logger.error(f"Failed to process {audio_file.name}: {e}")
                 continue
-        
+
         logger.info(f"Batch processing completed: {len(processed_files)}/{len(audio_files)} files")
         return processed_files
     

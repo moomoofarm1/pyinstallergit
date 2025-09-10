@@ -575,11 +575,11 @@ class ServerManager:
         if server_type == ServerType.DIARIZATION:
             venv = Path(self.diarization_venv)
             script = "server.py"
-            script_path = Path(server_type.value) / script
+            script_rel = Path(server_type.value) / script
         elif server_type == ServerType.TRANSCRIPTION:
-            venv = Path(self.transcription_venv)  
+            venv = Path(self.transcription_venv)
             script = "server.py"
-            script_path = Path(server_type.value) / script
+            script_rel = Path(server_type.value) / script
         elif server_type == ServerType.LABEL_STUDIO:
             # Label Studio uses diarization venv but different command structure
             venv = Path(self.diarization_venv)
@@ -589,13 +589,20 @@ class ServerManager:
             raise ValueError(f"Unknown server type: {server_type}")
         
         python_path = venv / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
-        
+
+        # Determine actual script location (handles PyInstaller bundles)
+        base_dir = Path(sys._MEIPASS) if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS') else Path.cwd()
+        script_path = base_dir / script_rel
+
+        # Update working directory to script location
+        self.configs[server_type].working_directory = script_path.parent
+
         if not python_path.exists():
             raise FileNotFoundError(f"Python not found in virtual environment: {python_path}")
-        
+
         if not script_path.exists():
             raise FileNotFoundError(f"Server script not found: {script_path}")
-        
+
         return str(python_path), str(script_path)
     
     def _wait_for_server_startup(self, server_type: ServerType, timeout: int) -> bool:

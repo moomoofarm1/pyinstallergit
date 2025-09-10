@@ -14,6 +14,7 @@ The protocol provides standardized message formats for:
 
 import json
 import logging
+import queue
 from typing import Dict, Any, Optional, List, Union
 from datetime import datetime
 from enum import Enum
@@ -483,7 +484,6 @@ class MessageQueue:
     
     def __init__(self, maxsize: int = 100):
         """Initialize message queue with maximum size."""
-        import queue
         self.queue = queue.Queue(maxsize=maxsize)
         self.logger = logging.getLogger(f"{__name__}.MessageQueue")
     

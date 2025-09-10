@@ -15,6 +15,7 @@ can dynamically install ML frameworks using uv in virtual environments.
 import sys
 import os
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_data_files
 
 # Build configuration
 APP_NAME = "ALF-AudioProcessing"
@@ -47,6 +48,9 @@ datas = [
     ('readme.md', '.'),
     ('CLAUDE.md', '.'),
 ]
+
+# Include diarization server resources
+datas += collect_data_files('diarization', include_py_files=True)
 
 # Include uv executable if found
 binaries = []
