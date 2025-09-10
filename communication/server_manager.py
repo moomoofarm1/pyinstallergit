@@ -118,7 +118,6 @@ class ServerManager:
         self.venv_dir = Path(tempfile.gettempdir()) / "alf_venvs"
         self.diarization_venv = self.venv_dir / "diarization"
         self.transcription_venv = self.venv_dir / "transcription"
-        self.labelstudio_venv = self.venv_dir / "labelstudio"
 
         logger.info("ServerManager initialized")
         if psutil is None or requests is None:
@@ -190,7 +189,7 @@ class ServerManager:
 
         raise RuntimeError("uv package manager not found. Please install uv with: curl -LsSf https://astral.sh/uv/install.sh | sh")
     
-    def _setup_diarization_environment(self, include_label_studio=False):
+    def _setup_diarization_environment(self, include_label_studio=True):
         """Set up the diarization virtual environment with Label Studio.
         
         Args:
@@ -257,7 +256,10 @@ class ServerManager:
                 else:
                     logger.info("Dependencies installed successfully with uv")
             else:
-                logger.info(f"Installing packages including Label Studio...")
+                if include_label_studio:
+                    logger.info("Installing diarization packages including Label Studio...")
+                else:
+                    logger.info("Installing diarization packages (without Label Studio)...")
                 # Install all dependencies at once using uv (more efficient)
                 cmd = [uv_exe, "pip", "install", "-p", str(python_path)] + base_deps
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)  # 10 minute timeout
@@ -669,7 +671,7 @@ class ServerManager:
             # Automatically create required virtual environment if missing
             if server_type == ServerType.DIARIZATION and not Path(self.diarization_venv).exists():
                 logger.info("Diarization environment not found. Creating with uv...")
-                self._setup_diarization_environment(include_label_studio=False)
+                self._setup_diarization_environment(include_label_studio=True)
             elif server_type == ServerType.TRANSCRIPTION and not Path(self.transcription_venv).exists():
                 logger.info("Transcription environment not found. Creating with uv...")
                 self._setup_transcription_environment()
