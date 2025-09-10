@@ -606,10 +606,7 @@ class AudioProcessingApp:
             info_lines.append(f"  Venv exists: {'✓' if env_info['diarization_venv_exists'] else '✗'}")
             info_lines.append(f"  Python exists: {'✓' if env_info['python_exists'] else '✗'}")
             info_lines.append("")
-            info_lines.append("LABEL STUDIO ENVIRONMENT:")
-            info_lines.append(f"  Venv path: {env_info['labelstudio_venv_path']}")
-            info_lines.append(f"  Venv exists: {'✓' if env_info['labelstudio_venv_exists'] else '✗'}")
-            info_lines.append(f"  Python exists: {'✓' if env_info['labelstudio_python_exists'] else '✗'}")
+            info_lines.append("LABEL STUDIO (in diarization env):")
             info_lines.append(f"  Label Studio installed: {'✓' if env_info['label_studio_installed'] else '✗'}")
             info_lines.append("")
             info_lines.append(f"uv available: {'✓' if env_info['uv_available'] else '✗'}")
@@ -620,25 +617,25 @@ class AudioProcessingApp:
             # Update GUI display
             status = "Environment check completed"
             
-            # Check both diarization and Label Studio environments
+            # Check diarization environment (includes Label Studio)
             diarization_ready = env_info['diarization_venv_exists'] and env_info['python_exists']
-            labelstudio_ready = env_info['labelstudio_venv_exists'] and env_info['labelstudio_python_exists'] and env_info['label_studio_installed']
+            labelstudio_ready = env_info['label_studio_installed']
             
             if diarization_ready and labelstudio_ready:
-                status += " - ✓ Both environments ready"
+                status += " - ✓ Environment ready with Label Studio"
                 self.diarization_env_info_var.set("✓ Diarization ready | ✓ Label Studio ready")
-            elif diarization_ready and env_info['labelstudio_venv_exists'] and env_info['labelstudio_python_exists']:
+            elif diarization_ready and not labelstudio_ready:
                 status += " - ⚠ Label Studio not installed"
                 self.diarization_env_info_var.set("✓ Diarization ready | ⚠ Label Studio missing")
-            elif diarization_ready:
-                status += " - ⚠ Label Studio environment missing"
-                self.diarization_env_info_var.set("✓ Diarization ready | ✗ Label Studio env missing")
+            elif not diarization_ready:
+                status += " - ⚠ Diarization environment missing"
+                self.diarization_env_info_var.set("✗ Diarization env missing")
             elif env_info['diarization_venv_exists']:
                 status += " - ⚠ Diarization Python missing"
                 self.diarization_env_info_var.set("⚠ Diarization incomplete | ✗ Label Studio unknown")
             else:
-                status += " - ✗ Environments missing"
-                self.diarization_env_info_var.set("✗ Both environments missing")
+                status += " - ✗ Environment missing"
+                self.diarization_env_info_var.set("✗ Environment missing")
             
             # Show detailed info in a popup
             detailed_info = "\n".join(info_lines)
