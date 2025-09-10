@@ -197,13 +197,25 @@ class ServerManager:
         try:
             # Get uv executable
             uv_exe = self._get_uv_executable()
+            logger.info(f"Found uv executable at: {uv_exe}")
+            
+            # Create parent directory if it doesn't exist
+            self.venv_dir.mkdir(exist_ok=True)
+            logger.info(f"Created venv directory: {self.venv_dir}")
             
             # Create environment using uv
             cmd = [uv_exe, "venv", str(Path(self.diarization_venv)), "--python", "3.9"]
+            logger.info(f"Creating virtual environment with command: {' '.join(cmd)}")
             result = subprocess.run(cmd, capture_output=True, text=True)
             
             if result.returncode != 0:
+                logger.error(f"uv venv creation failed. Return code: {result.returncode}")
+                logger.error(f"stdout: {result.stdout}")
+                logger.error(f"stderr: {result.stderr}")
                 raise RuntimeError(f"Failed to create diarization venv: {result.stderr}")
+            else:
+                logger.info(f"Successfully created virtual environment at: {self.diarization_venv}")
+                logger.info(f"uv output: {result.stdout}")
             
             # Install diarization dependencies using uv (faster than pip)
             python_path = Path(self.diarization_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
@@ -431,7 +443,10 @@ class ServerManager:
                 "--data-dir", str(ls_project_dir)
             ]
             
-            logger.info("Starting Label Studio server...")
+            logger.info(f"Starting Label Studio server with command: {' '.join(cmd)}")
+            logger.info(f"Using Python path: {python_path}")
+            logger.info(f"Working directory: {Path.cwd()}")
+            logger.info(f"Label Studio project directory: {ls_project_dir}")
             
             process = subprocess.Popen(
                 cmd,
@@ -453,10 +468,20 @@ class ServerManager:
                 self._start_health_monitor(ServerType.LABEL_STUDIO)
                 
                 logger.info(f"Label Studio server started successfully (PID: {process.pid})")
+                logger.info("Label Studio should be accessible at http://127.0.0.1:8080")
                 return True
             else:
                 self.servers[ServerType.LABEL_STUDIO].state = ServerState.ERROR
                 self.servers[ServerType.LABEL_STUDIO].error_message = "Label Studio failed to start within timeout"
+                
+                # Capture process output for debugging
+                try:
+                    stdout, stderr = process.communicate(timeout=2)
+                    logger.error(f"Label Studio startup failed. Process stdout: {stdout}")
+                    logger.error(f"Label Studio startup failed. Process stderr: {stderr}")
+                except subprocess.TimeoutExpired:
+                    logger.error("Label Studio process is still running but not responding to health checks")
+                
                 self._cleanup_failed_process(ServerType.LABEL_STUDIO)
                 return False
                 
