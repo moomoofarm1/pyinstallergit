@@ -1,6 +1,6 @@
-"""
-Transcription Module
+"""Transcription package.
 
-This module provides automatic speech recognition using NeMo ASR models
-integrated with Label Studio ML backend for transcription tasks.
+This package exposes the transcription pipeline based on NVIDIA's NeMo ASR
+models.  It is designed to integrate with the Label Studio backend for
+convenient manual review of generated transcripts.
 """

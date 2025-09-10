@@ -1,6 +1,7 @@
-"""
-Test Module
+"""Test suite package for ALF.
 
-This module contains unit tests and integration tests for all components
-of the audio processing pipeline using pytest framework.
+The :mod:`tests` package groups together unit and integration tests for the
+Audio Label Frontend. Keeping this file with a short description helps new
+contributors understand the purpose of the directory and allows ``pytest`` to
+discover the package cleanly.
 """
