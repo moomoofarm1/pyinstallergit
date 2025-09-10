@@ -229,7 +229,7 @@ pip install pyinstaller-hooks-contrib
 
 **Problem**: "Server startup failed"
 **Solution**:
-- Check if ports 9090/9092 are available
+- Check if ports 9091/9092 are available
 - Verify virtual environments were created
 - Check application logs
 

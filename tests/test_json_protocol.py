@@ -414,12 +414,12 @@ class TestMessageTypes:
         status = ServerStatus(
             server_type="diarization",
             status="running",
-            port=9090
+            port=9091
         )
-
+        
         assert status.server_type == "diarization"
         assert status.status == "running"
-        assert status.port == 9090
+        assert status.port == 9091
         assert status.pid is None  # Default value
         assert status.active_jobs == 0  # Default value
 

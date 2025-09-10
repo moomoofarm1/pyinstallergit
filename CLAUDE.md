@@ -92,7 +92,7 @@ pytest tests/ -v
 #### Environment Variables
 - `HF_TOKEN`: Hugging Face token for pyannote.audio models
 - `ALF_SERVER_HOST`: Server host (default: 127.0.0.1)
-- `ALF_SERVER_PORT`: Server port (9090 for diarization, 9092 for transcription)
+- `ALF_SERVER_PORT`: Server port (9091 for diarization, 9092 for transcription)
 
 #### Audio Processing Settings
 - Input: MP3, WAV, FLAC, M4A files
@@ -102,7 +102,7 @@ pytest tests/ -v
 ## Ports and Services
 
 - **Port 8080**: Label Studio frontend (external)
-- **Port 9090**: Diarization server (pyannote.audio)
+- **Port 9091**: Diarization server (pyannote.audio)
 - **Port 9092**: Transcription server (NeMo ASR)
 - **GUI**: Tkinter application (local)
 
