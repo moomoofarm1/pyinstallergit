@@ -1,3 +1,4 @@
+
 """Minimal Tkinter helper to run Label Studio in a temporary environment."""
 
 import os
@@ -7,6 +8,7 @@ import tempfile
 import threading
 import tkinter as tk
 from tkinter import messagebox
+
 
 # Paths to the temporary virtual environment and running server process
 env_dir = None
@@ -50,10 +52,12 @@ def stop_env():
     if server_process is not None:
         server_process.terminate()
         server_process = None
+
     if env_dir is not None:
         shutil.rmtree(env_dir)
         messagebox.showinfo("Environment", f"Deleted environment at\n{env_dir}")
         env_dir = None
+
 
 def main():
     """Launch the minimal graphical interface."""
@@ -65,4 +69,5 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":  # pragma: no cover - manual use only
+
     main()
