@@ -1,6 +1,7 @@
 fastapi[standard]
 label-studio
 label-studio-ml
+numpy
 transformers
 torch
 requests

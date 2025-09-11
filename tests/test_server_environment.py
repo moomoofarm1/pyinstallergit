@@ -40,8 +40,10 @@ def test_environment_created_on_start(tmp_path, server_type, venv_attr, setup_me
          patch.object(sm, "_prepare_server_startup", return_value=("python", str(dummy_script))), \
          patch("communication.server_manager.subprocess.Popen", return_value=mock_process):
 
-        def create_dummy_env():
-            python_path = getattr(sm, venv_attr) / ("Scripts" if os.name == "nt" else "bin") / "python"
+        def create_dummy_env(*args, **kwargs):
+            python_path = getattr(sm, venv_attr) / (
+                "Scripts" if os.name == "nt" else "bin"
+            ) / "python"
             python_path.parent.mkdir(parents=True, exist_ok=True)
             python_path.touch()
         mock_setup_env.side_effect = create_dummy_env
