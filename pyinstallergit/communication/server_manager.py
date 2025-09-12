@@ -525,10 +525,16 @@ class ServerManager:
                 logger.info("Label Studio server is already running")
                 return True
             
-            # Check if Label Studio environment exists, create if missing
-            if not Path(self.labelstudio_venv).exists():
-                logger.info("Label Studio environment not found. Creating with uv...")
-                self._setup_labelstudio_environment()
+            # Check if uvx is available (Label Studio will be managed by uvx)
+            try:
+                subprocess.run(["uvx", "--version"], capture_output=True, check=True)
+                logger.info("uvx is available - Label Studio will be managed automatically")
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                logger.warning("uvx not found. Falling back to virtual environment setup...")
+                # Fallback: Check if Label Studio environment exists, create if missing
+                if not Path(self.labelstudio_venv).exists():
+                    logger.info("Label Studio environment not found. Creating with uv...")
+                    self._setup_labelstudio_environment()
             
             # Update server info
             self.servers[ServerType.LABEL_STUDIO] = ServerInfo(
@@ -555,18 +561,30 @@ class ServerManager:
             env['LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED'] = 'true'
             env['LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT'] = str(Path.cwd())
             
-            # Start Label Studio using subprocess.run approach
-            # Using the Label Studio virtual environment's Python executable
-            cmd = [
-                str(python_path), '-m', 'label_studio', 
-                'start', 'diarization_project',
-                '--host', '127.0.0.1',
-                '--port', '8080', 
-                '--data-dir', str(ls_project_dir)
-            ]
+            # Try uvx approach first, fallback to virtual environment if needed
+            try:
+                subprocess.run(["uvx", "--version"], capture_output=True, check=True)
+                # Use uvx approach for more reliable execution
+                cmd = [
+                    "uvx", "label-studio", "start", "diarization_project",
+                    "--host", "127.0.0.1",
+                    "--port", "8080", 
+                    "--data-dir", str(ls_project_dir)
+                ]
+                logger.info(f"Starting Label Studio server with uvx command: {' '.join(cmd)}")
+                logger.info("Using uvx for automatic Label Studio management")
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                # Fallback to virtual environment approach
+                cmd = [
+                    str(python_path), '-m', 'label_studio', 
+                    'start', 'diarization_project',
+                    '--host', '127.0.0.1',
+                    '--port', '8080', 
+                    '--data-dir', str(ls_project_dir)
+                ]
+                logger.info(f"uvx not available, using virtual environment: {' '.join(cmd)}")
+                logger.info(f"Using Python path from Label Studio venv: {python_path}")
             
-            logger.info(f"Starting Label Studio server with command: {' '.join(cmd)}")
-            logger.info(f"Using Python path from Label Studio venv: {python_path}")
             logger.info(f"Working directory: {Path.cwd()}")
             logger.info(f"Label Studio project directory: {ls_project_dir}")
             
