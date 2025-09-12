@@ -725,7 +725,7 @@ class ServerManager:
             script_rel = Path(server_type.value) / script
         elif server_type == ServerType.LABEL_STUDIO:
             # Label Studio uses its own separate virtual environment
-            venv = Path(self.diarization_venv)
+            venv = Path(self.labelstudio_venv)
             # Label Studio doesn't use a script file, handled separately
             return str(venv / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")), ""
         else:
