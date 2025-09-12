@@ -534,7 +534,7 @@ class ServerManager:
             )
             
             # Use python from Label Studio's own virtual environment
-            python_path = Path(self.diarization_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
+            python_path = Path(self.labelstudio_venv) / ("Scripts/python.exe" if os.name == 'nt' else "bin/python")
             
             if not python_path.exists():
                 raise FileNotFoundError(f"Python not found in Label Studio environment: {python_path}")
@@ -550,20 +550,22 @@ class ServerManager:
             env['LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED'] = 'true'
             env['LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT'] = str(Path.cwd())
             
-            # Start Label Studio
+            # Start Label Studio using subprocess.run approach
+            # Using the Label Studio virtual environment's Python executable
             cmd = [
-                str(python_path), "-m", "label_studio",
-                "start", "diarization_project",
-                "--host", "127.0.0.1",
-                "--port", "8080",
-                "--data-dir", str(ls_project_dir)
+                str(python_path), '-m', 'label_studio', 
+                'start', 'diarization_project',
+                '--host', '127.0.0.1',
+                '--port', '8080', 
+                '--data-dir', str(ls_project_dir)
             ]
             
             logger.info(f"Starting Label Studio server with command: {' '.join(cmd)}")
-            logger.info(f"Using Python path: {python_path}")
+            logger.info(f"Using Python path from Label Studio venv: {python_path}")
             logger.info(f"Working directory: {Path.cwd()}")
             logger.info(f"Label Studio project directory: {ls_project_dir}")
             
+            # Use Popen for non-blocking execution in the background
             process = subprocess.Popen(
                 cmd,
                 cwd=Path.cwd(),
