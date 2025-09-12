@@ -525,6 +525,11 @@ class ServerManager:
                 logger.info("Label Studio server is already running")
                 return True
             
+            # Check if Label Studio environment exists, create if missing
+            if not Path(self.labelstudio_venv).exists():
+                logger.info("Label Studio environment not found. Creating with uv...")
+                self._setup_labelstudio_environment()
+            
             # Update server info
             self.servers[ServerType.LABEL_STUDIO] = ServerInfo(
                 server_type=ServerType.LABEL_STUDIO,
