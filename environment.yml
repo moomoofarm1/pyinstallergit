@@ -1,23 +1,13 @@
-name: diarization-env
+name: labelstudio-env
 channels:
-  - pytorch
   - conda-forge
   - defaults
 dependencies:
   - python=3.9
   - pip
-  - pytorch
-  - torchaudio
-  - numpy
-  - scipy
-  - librosa
-  - soundfile
   - requests
-  - pydantic
   - pip:
     - label-studio>=1.10.0
     - label-studio-ml>=1.0.9
-    - pyannote.audio>=3.0.0
     - pyinstaller>=6.3
     - pyinstaller-hooks-contrib>=2024.0
-    - pydub>=0.25.1

@@ -8,15 +8,6 @@ hiddenimports = [
     'label_studio_ml.model',
     'label_studio_ml.server',
     'label_studio_ml.utils',
-    'pyannote.audio',
-    'pyannote.core',
-    'torch',
-    'torchaudio',
-    'librosa',
-    'soundfile',
-    'scipy',
-    'numpy',
-    'pydantic',
     'requests',
     'uvicorn',
     'uvicorn.protocols',
@@ -27,8 +18,6 @@ hiddenimports = [
     'uvicorn.loops',
     'uvicorn.loops.auto',
     'uvicorn.logging',
-    'pydub',
-    'pydub.utils',
     'tempfile',
     'pathlib',
     'threading',
@@ -39,11 +28,11 @@ hiddenimports = [
 
 # Data files to include
 datas = [
-    # Include any model files or configurations if needed
+    # Include any configuration files if needed
 ]
 
 a = Analysis(
-    ['diarization_module.py'],
+    ['labelstudio_app.py'],
     pathex=['.'],
     binaries=[],
     datas=datas,
@@ -57,6 +46,14 @@ a = Analysis(
         'IPython',
         'jupyter',
         'notebook',
+        'torch',
+        'torchaudio',
+        'librosa',
+        'soundfile',
+        'scipy',
+        'numpy',
+        'pyannote',
+        'pydub',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -73,7 +70,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='DiarizationApp',
+    name='LabelStudioApp',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

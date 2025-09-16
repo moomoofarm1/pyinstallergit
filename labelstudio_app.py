@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Single Diarization Module with Label Studio Integration
-Uses conda environment with threading for frontend and ML backend
+Clean Label Studio Application with ML Backend
+Minimal implementation with Label Studio + Label Studio ML + PyInstaller
 """
 
 import os
@@ -12,7 +12,7 @@ import subprocess
 import logging
 import tempfile
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional
 import json
 
 # Configure logging
@@ -20,117 +20,51 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('diarization.log'),
+        logging.FileHandler('labelstudio_app.log'),
         logging.StreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger(__name__)
 
 
-class DiarizationMLBackend:
-    """Label Studio ML Backend for Speaker Diarization using pyannote.audio"""
+class LabelStudioMLBackend:
+    """Simple Label Studio ML Backend"""
 
     def __init__(self, port: int = 9090):
         self.port = port
-        self.model = None
-        self.temp_dir = Path(tempfile.mkdtemp(prefix="diarization_"))
+        self.temp_dir = Path(tempfile.mkdtemp(prefix="labelstudio_ml_"))
         self.process: Optional[subprocess.Popen] = None
 
     def create_ml_backend_script(self) -> Path:
-        """Create the ML backend script file"""
+        """Create a simple ML backend script"""
         script_content = '''
 import os
-import tempfile
-from pathlib import Path
-import torch
-import torchaudio
-from pyannote.audio import Pipeline
+import json
 from label_studio_ml.model import LabelStudioMLBase
-from label_studio_ml.utils import get_single_tag_key, get_choice
 
-class DiarizationModel(LabelStudioMLBase):
-    """Pyannote.audio diarization model for Label Studio"""
+class SimpleMLBackend(LabelStudioMLBase):
+    """Simple ML Backend for Label Studio"""
 
     def __init__(self, **kwargs):
-        super(DiarizationModel, self).__init__(**kwargs)
-
-        # Initialize pyannote pipeline
-        # Requires HF_TOKEN environment variable
-        self.pipeline = None
-        self._init_pipeline()
-
-    def _init_pipeline(self):
-        """Initialize the diarization pipeline"""
-        try:
-            # Load the pretrained pipeline
-            self.pipeline = Pipeline.from_pretrained(
-                "pyannote/speaker-diarization-3.1",
-                use_auth_token=os.getenv("HF_TOKEN")
-            )
-            if torch.cuda.is_available():
-                self.pipeline = self.pipeline.to(torch.device("cuda"))
-            print("Diarization pipeline loaded successfully")
-        except Exception as e:
-            print(f"Error loading diarization pipeline: {e}")
-            self.pipeline = None
+        super(SimpleMLBackend, self).__init__(**kwargs)
+        print("Simple ML Backend initialized")
 
     def predict(self, tasks, **kwargs):
-        """Predict speaker segments for audio files"""
-        if not self.pipeline:
-            return []
-
+        """Simple prediction function - returns empty predictions"""
         predictions = []
 
         for task in tasks:
-            # Extract audio file path from task data
-            audio_url = task["data"].get("audio")
-            if not audio_url:
-                continue
-
-            try:
-                # Process audio file
-                if audio_url.startswith("http"):
-                    # Handle remote audio files
-                    import requests
-                    response = requests.get(audio_url)
-                    temp_audio = Path(tempfile.mktemp(suffix=".wav"))
-                    with open(temp_audio, "wb") as f:
-                        f.write(response.content)
-                    audio_path = str(temp_audio)
-                else:
-                    # Handle local audio files
-                    audio_path = audio_url.replace("file://", "")
-
-                # Run diarization
-                diarization = self.pipeline(audio_path)
-
-                # Convert to Label Studio format
-                results = []
-                for turn, _, speaker in diarization.itertracks(yield_label=True):
-                    results.append({
-                        "from_name": "speaker",
-                        "to_name": "audio",
-                        "type": "timeserieslabels",
-                        "value": {
-                            "start": turn.start,
-                            "end": turn.end,
-                            "timeserieslabels": [speaker]
-                        }
-                    })
-
-                predictions.append({
-                    "result": results,
-                    "score": 0.9  # Confidence score
-                })
-
-            except Exception as e:
-                print(f"Error processing audio file: {e}")
-                predictions.append({"result": []})
+            # Return empty predictions for now
+            # Users can customize this method for their specific ML needs
+            predictions.append({
+                "result": [],
+                "score": 0.0
+            })
 
         return predictions
 
     def fit(self, completions, workdir=None, **kwargs):
-        """Optional: Implement fine-tuning if needed"""
+        """Training function - not implemented"""
         return {"status": "ok", "message": "Training not implemented"}
 
 if __name__ == "__main__":
@@ -144,7 +78,7 @@ if __name__ == "__main__":
 
     # Create the ML backend app
     app = init_app(
-        model_class=DiarizationModel,
+        model_class=SimpleMLBackend,
         model_dir=os.path.dirname(__file__),
         redis_queue=False,
         redis_host=None,
@@ -163,7 +97,7 @@ if __name__ == "__main__":
         return script_path
 
     def start_ml_backend(self) -> bool:
-        """Start the ML backend server in a subprocess"""
+        """Start the ML backend server"""
         try:
             script_path = self.create_ml_backend_script()
 
@@ -198,7 +132,7 @@ if __name__ == "__main__":
 class LabelStudioFrontend:
     """Label Studio Frontend Server Manager"""
 
-    def __init__(self, port: int = 8080, project_name: str = "Diarization"):
+    def __init__(self, port: int = 8080, project_name: str = "LabelStudio"):
         self.port = port
         self.project_name = project_name
         self.process: Optional[subprocess.Popen] = None
@@ -243,19 +177,19 @@ class LabelStudioFrontend:
             logger.info("Label Studio frontend stopped")
 
 
-class DiarizationApp:
-    """Main application orchestrating frontend and ML backend"""
+class LabelStudioApp:
+    """Main Label Studio application with ML backend"""
 
     def __init__(self):
         self.frontend = LabelStudioFrontend(port=8080)
-        self.ml_backend = DiarizationMLBackend(port=9090)
+        self.ml_backend = LabelStudioMLBackend(port=9090)
         self.frontend_thread: Optional[threading.Thread] = None
         self.backend_thread: Optional[threading.Thread] = None
         self.running = False
 
     def start_services(self):
         """Start both frontend and ML backend services"""
-        logger.info("Starting Diarization Application...")
+        logger.info("Starting Label Studio Application...")
 
         # Start ML backend in thread
         self.backend_thread = threading.Thread(
@@ -310,15 +244,15 @@ class DiarizationApp:
             self.start_services()
 
             print("\n" + "="*60)
-            print("DIARIZATION APPLICATION RUNNING")
+            print("LABEL STUDIO APPLICATION RUNNING")
             print("="*60)
             print("Label Studio UI: http://localhost:8080")
             print("ML Backend API: http://localhost:9090")
             print("\nInstructions:")
             print("1. Open http://localhost:8080 in your browser")
-            print("2. Create a new project for audio labeling")
+            print("2. Create a new project for data labeling")
             print("3. Configure ML backend URL: http://localhost:9090")
-            print("4. Upload audio files for diarization")
+            print("4. Upload data files for labeling")
             print("5. Press Ctrl+C to stop the application")
             print("="*60)
 
@@ -336,13 +270,10 @@ class DiarizationApp:
 
 def main():
     """Main entry point"""
-    # Check for HF_TOKEN
-    if not os.getenv("HF_TOKEN"):
-        print("WARNING: HF_TOKEN environment variable not set!")
-        print("Please set HF_TOKEN for pyannote.audio model access")
-        print("Export HF_TOKEN=your_token_here")
+    print("Label Studio Application with ML Backend")
+    print("Clean implementation for PyInstaller packaging")
 
-    app = DiarizationApp()
+    app = LabelStudioApp()
     app.run()
 
 

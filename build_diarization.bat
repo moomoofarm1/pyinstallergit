@@ -1,8 +1,8 @@
 @echo off
-REM Build script for Diarization Application using conda environment and PyInstaller
+REM Build script for Label Studio Application using conda environment and PyInstaller
 
 echo ===============================================
-echo Diarization Application Build Script
+echo Label Studio Application Build Script
 echo ===============================================
 echo.
 
@@ -33,7 +33,7 @@ if errorlevel 1 (
 
 echo.
 echo Step 2: Activating conda environment...
-call conda activate diarization-env
+call conda activate labelstudio-env
 if errorlevel 1 (
     echo ERROR: Failed to activate conda environment
     pause
@@ -55,28 +55,27 @@ if exist "__pycache__" rmdir /s /q "__pycache__"
 
 echo.
 echo Step 5: Building executable with PyInstaller...
-echo This may take several minutes due to ML dependencies...
-pyinstaller diarization.spec --clean --noconfirm
+echo This may take a few minutes...
+pyinstaller labelstudio.spec --clean --noconfirm
 
 echo.
 echo Step 6: Verifying build...
-if exist "dist\DiarizationApp.exe" (
+if exist "dist\LabelStudioApp.exe" (
     echo.
     echo SUCCESS: Executable built successfully!
-    echo Location: dist\DiarizationApp.exe
+    echo Location: dist\LabelStudioApp.exe
     echo.
     echo File size:
-    for %%i in ("dist\DiarizationApp.exe") do echo Size: %%~zi bytes
+    for %%i in ("dist\LabelStudioApp.exe") do echo Size: %%~zi bytes
     echo.
     echo Usage Instructions:
-    echo 1. Set HF_TOKEN environment variable before running
-    echo 2. Run: set HF_TOKEN=your_huggingface_token
-    echo 3. Execute: dist\DiarizationApp.exe
-    echo 4. Open browser to http://localhost:8080
+    echo 1. Execute: dist\LabelStudioApp.exe
+    echo 2. Open browser to http://localhost:8080
+    echo 3. Create projects and configure ML backend at http://localhost:9090
     echo.
 ) else (
     echo.
-    echo ERROR: Build failed! DiarizationApp.exe not found.
+    echo ERROR: Build failed! LabelStudioApp.exe not found.
     echo Check the output above for errors.
     echo.
     echo Common issues:
@@ -90,6 +89,5 @@ if exist "dist\DiarizationApp.exe" (
 
 echo.
 echo Build completed successfully!
-echo Don't forget to set HF_TOKEN before running the application.
 echo.
 pause
