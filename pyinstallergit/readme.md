@@ -84,8 +84,6 @@ project_root/
 1. **Start Diarization Server**: Automatically creates an isolated environment with pyannote.audio using `uv`
 2. **Process Audio**: Upload preprocessed audio for speaker diarization
 3. **Review Results**: Opens Label Studio browser for manual verification of speaker segments
-   - Label Studio starts automatically using `uvx label-studio start` for reliable execution
-   - Falls back to virtual environment if uvx is not available
 4. **Stop Diarization Server**: Use the dedicated stop button when finished
 5. **Export RTTM**: Generate Rich Transcription Time Marked files for further processing
 
@@ -113,9 +111,6 @@ project_root/
 - **pyannote.audio Integration**: State-of-the-art speaker diarization models
 - **RTTM Output**: Industry-standard Rich Transcription Time Marked format
 - **Label Studio Integration**: Browser-based manual verification interface
-  - **uvx Execution**: Primary method using `uvx label-studio start` for reliable startup
-  - **Virtual Environment Fallback**: Automatic fallback if uvx is not available
-  - **Isolated Dependencies**: Label Studio runs in separate environment from pyannote.audio
 
 ### 🎙️ **Speech Transcription** (Framework Ready)
 - **NeMo ASR Integration**: NVIDIA's advanced speech recognition toolkit
@@ -134,7 +129,7 @@ project_root/
 
 ## Ports and Services
 
-- **Port 8080**: Label Studio frontend (managed via uvx or virtual environment)
+- **Port 8080**: Label Studio frontend (external dependency)
 - **Port 9091**: Diarization server (pyannote.audio FastAPI)
 - **Port 9092**: Transcription server (NeMo ASR FastAPI - future)
 - **GUI**: Tkinter application (local)
@@ -156,48 +151,6 @@ uv venv <temp>/alf_venvs/diarization --python 3.9
 # Create transcription environment (when ready)
 uv venv <temp>/alf_venvs/transcription --python 3.9
 <temp>/alf_venvs/transcription/bin/pip install -r configs/transcription_env.txt
-```
-
-## Label Studio Integration Details
-
-### uvx Approach (Primary Method)
-The system uses `uvx` (uv's execution tool) for starting Label Studio when available:
-
-```bash
-# Command used internally:
-uvx label-studio start diarization_project --host 127.0.0.1 --port 8080 --data-dir ./label_studio_projects
-```
-
-**Benefits of uvx approach:**
-- **Automatic dependency management**: uvx handles Label Studio installation automatically
-- **Isolation**: Runs in completely isolated environment without conflicts
-- **Reliability**: More robust than virtual environment Python execution
-- **Simplified deployment**: No need for pre-installed Label Studio environments
-
-### Virtual Environment Fallback
-If uvx is not available, the system automatically falls back to traditional virtual environment execution:
-
-```bash
-# Fallback command:
-<labelstudio_venv>/bin/python -m label_studio start diarization_project --host 127.0.0.1 --port 8080 --data-dir ./label_studio_projects
-```
-
-### Environment Variables Set
-The system automatically configures Label Studio with these environment variables:
-- `LABEL_STUDIO_PORT=8080`
-- `LABEL_STUDIO_HOST=127.0.0.1`
-- `LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true`
-- `LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=<project_directory>`
-
-### Testing the Integration
-Comprehensive pytest tests are included to verify both uvx and fallback approaches:
-
-```bash
-# Test uvx integration specifically
-pytest tests/test_uvx_integration.py -v
-
-# Test Label Studio startup functionality  
-pytest tests/test_labelstudio_startup.py -v
 ```
 
 ## Advanced Usage

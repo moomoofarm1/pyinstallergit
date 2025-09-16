@@ -663,7 +663,7 @@ class ServerManager:
             # Automatically create required virtual environment if missing
             if server_type == ServerType.DIARIZATION and not Path(self.diarization_venv).exists():
                 logger.info("Diarization environment not found. Creating with uv...")
-                self._setup_diarization_environment(include_label_studio=True)
+                self._setup_diarization_environment()
             elif server_type == ServerType.TRANSCRIPTION and not Path(self.transcription_venv).exists():
                 logger.info("Transcription environment not found. Creating with uv...")
                 self._setup_transcription_environment()
