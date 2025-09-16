@@ -24,7 +24,10 @@ if not exist "environment.yml" (
 )
 
 echo Step 1: Creating conda environment from environment.yml...
-conda env create -f environment.yml --force
+echo Removing existing environment if it exists...
+conda env remove -n labelstudio-env -y >nul 2>&1
+echo Creating new environment...
+conda env create -f environment.yml
 if errorlevel 1 (
     echo ERROR: Failed to create conda environment
     pause
