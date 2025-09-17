@@ -6,12 +6,26 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 block_cipher = None
 
 # Collect all label-studio data files and submodules
-label_studio_datas = collect_data_files('label_studio')
-label_studio_ml_datas = collect_data_files('label_studio_ml')
+try:
+    label_studio_datas = collect_data_files('label_studio')
+except:
+    label_studio_datas = []
+
+try:
+    label_studio_ml_datas = collect_data_files('label_studio_ml')
+except:
+    label_studio_ml_datas = []
 
 # Collect hidden imports
-label_studio_imports = collect_submodules('label_studio')
-label_studio_ml_imports = collect_submodules('label_studio_ml')
+try:
+    label_studio_imports = collect_submodules('label_studio')
+except:
+    label_studio_imports = []
+
+try:
+    label_studio_ml_imports = collect_submodules('label_studio_ml')
+except:
+    label_studio_ml_imports = []
 
 # Additional hidden imports that might be needed
 hidden_imports = [

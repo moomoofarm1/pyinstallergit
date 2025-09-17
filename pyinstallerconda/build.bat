@@ -38,23 +38,20 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo === Installing Label Studio ===
-venv\Scripts\python.exe -m pip install "label-studio>=1.10.0"
+echo === Installing Label Studio Frontend ===
+venv\Scripts\python.exe -m pip install label-studio
 if %errorlevel% neq 0 (
-    echo Failed to install Label Studio. Exiting.
+    echo Failed to install Label Studio frontend. Exiting.
     pause
     exit /b 1
 )
 
-echo === Installing Label Studio ML backend ===
-venv\Scripts\python.exe -m pip install "label-studio-ml>=1.0.9"
+echo === Installing Label Studio ML Backend from GitHub ===
+echo Installing label-studio-ml-backend from GitHub repository...
+venv\Scripts\python.exe -m pip install git+https://github.com/HumanSignal/label-studio-ml-backend.git
 if %errorlevel% neq 0 (
-    echo WARNING: Failed to install label-studio-ml. Trying alternative...
-    echo Trying to install from GitHub...
-    venv\Scripts\python.exe -m pip install git+https://github.com/HumanSignal/label-studio-ml-backend.git
-    if %errorlevel% neq 0 (
-        echo Failed to install Label Studio ML backend. Continuing without it...
-    )
+    echo WARNING: Failed to install label-studio-ml-backend from GitHub. Continuing without it...
+    echo The application will work without the ML backend.
 )
 
 REM Clean previous builds
