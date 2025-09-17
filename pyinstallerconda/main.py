@@ -67,7 +67,8 @@ class LabelStudioLauncher:
             return True
         except Exception as e:
             print(f"Failed to start backend: {e}")
-            return False
+            print("ML backend is optional - continuing without it...")
+            return True  # Return True to continue without ML backend
 
     def monitor_processes(self):
         """Monitor processes and restart if needed"""
@@ -104,9 +105,8 @@ class LabelStudioLauncher:
         print("=" * 40)
 
         # Start services
-        if not self.start_backend():
-            print("Failed to start ML backend. Exiting.")
-            sys.exit(1)
+        print("Starting ML backend...")
+        self.start_backend()
 
         # Wait a moment for backend to initialize
         time.sleep(3)
@@ -117,7 +117,10 @@ class LabelStudioLauncher:
 
         print("\nLabel Studio is starting up...")
         print("Frontend will be available at: http://localhost:8080")
-        print("ML Backend will be available at: http://localhost:9090")
+        if self.backend_process and self.backend_process.poll() is None:
+            print("ML Backend is available at: http://localhost:9090")
+        else:
+            print("ML Backend is not available (this is optional)")
         print("\nPress Ctrl+C to stop all services")
 
         # Start monitoring in a separate thread
