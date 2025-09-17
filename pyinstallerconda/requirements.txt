@@ -1,5 +1,3 @@
 label-studio
 git+https://github.com/HumanSignal/label-studio-ml-backend.git
-pyinstaller>=6.0
-requests>=2.25.0
-psutil>=5.8.0
+pyinstaller

@@ -18,40 +18,29 @@ call venv\Scripts\activate.bat
 
 REM Install dependencies
 echo Installing dependencies...
-echo Upgrading pip in virtual environment...
-venv\Scripts\python.exe -m pip install --upgrade pip
-if %errorlevel% neq 0 (
-    echo Failed to upgrade pip. Continuing anyway...
-)
 
-echo Installing packages step by step...
-echo.
-echo === Contents of requirements.txt ===
-type requirements.txt
-echo.
-
-echo === Installing core packages first ===
-venv\Scripts\python.exe -m pip install requests psutil pyinstaller
-if %errorlevel% neq 0 (
-    echo Failed to install core packages. Exiting.
-    pause
-    exit /b 1
-)
-
-echo === Installing Label Studio Frontend ===
+echo === Installing Label Studio ===
 venv\Scripts\python.exe -m pip install label-studio
 if %errorlevel% neq 0 (
-    echo Failed to install Label Studio frontend. Exiting.
+    echo Failed to install Label Studio. Exiting.
     pause
     exit /b 1
 )
 
-echo === Installing Label Studio ML Backend from GitHub ===
-echo Installing label-studio-ml-backend from GitHub repository...
+echo === Installing Label Studio ML Backend ===
 venv\Scripts\python.exe -m pip install git+https://github.com/HumanSignal/label-studio-ml-backend.git
 if %errorlevel% neq 0 (
-    echo WARNING: Failed to install label-studio-ml-backend from GitHub. Continuing without it...
-    echo The application will work without the ML backend.
+    echo Failed to install Label Studio ML Backend. Exiting.
+    pause
+    exit /b 1
+)
+
+echo === Installing PyInstaller ===
+venv\Scripts\python.exe -m pip install pyinstaller
+if %errorlevel% neq 0 (
+    echo Failed to install PyInstaller. Exiting.
+    pause
+    exit /b 1
 )
 
 REM Clean previous builds

@@ -47,34 +47,20 @@ The application will start both services:
 
 Press `Ctrl+C` to stop all services.
 
-## Project Structure
-
-```
-pyinstallerconda/
-├── main.py              # Main launcher script
-├── main.spec            # PyInstaller specification
-├── requirements.txt     # Python dependencies
-├── build.bat           # Windows build script
-├── build.sh            # Unix build script
-└── README.md           # This file
-```
-
 ## Dependencies
 
+The build installs only the essential packages:
 - label-studio: Main annotation platform
-- label-studio-ml-backend: ML backend for Label Studio
+- label-studio-ml-backend: ML backend from GitHub repository
 - pyinstaller: For creating standalone executables
-- requests: HTTP client library
-- psutil: Process management utilities
 
 ## Troubleshooting
 
 If you encounter issues:
 
-1. Ensure all dependencies are installed correctly
+1. Ensure Python 3.8+ is installed
 2. Check that no other services are running on ports 8080 or 9090
-3. Verify Python 3.8+ is installed
-4. For build issues, check the PyInstaller logs in the console output
+3. For build issues, check the PyInstaller logs in the console output
 
 ## Development
 

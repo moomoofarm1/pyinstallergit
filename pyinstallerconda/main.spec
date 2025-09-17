@@ -27,20 +27,10 @@ try:
 except:
     label_studio_ml_imports = []
 
-# Additional hidden imports that might be needed
+# Essential hidden imports for Label Studio
 hidden_imports = [
     'label_studio.server',
     'label_studio_ml.server',
-    'uvicorn',
-    'fastapi',
-    'starlette',
-    'pydantic',
-    'sqlalchemy',
-    'redis',
-    'celery',
-    'django',
-    'psycopg2',
-    'mysqlclient',
 ] + label_studio_imports + label_studio_ml_imports
 
 a = Analysis(
